@@ -1,0 +1,18 @@
+﻿namespace TechShop_API_backend_.Models
+{
+    public class MongoDbSettings
+    {
+        public string ConnectionString { get; set; }
+        public string DatabaseName { get; set; }
+        public string ProductCollectionName { get; set; }
+
+        public string OrderCollectionName { get; set; }
+        public string ReviewCollectionName { set; get; }
+
+        public string CategoryCollectionName { get; set; }
+
+        public string UserDetailCollectionName { get; set; }
+
+
+    }
+}
