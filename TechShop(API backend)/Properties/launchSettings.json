@@ -36,9 +36,9 @@
 
             //JWT key
 
-            "JWT__Key" : "123"
+            "JWT__Key": "ThisIsASuperStrongSecretKey123456!"
 
-            
+
 
 
 

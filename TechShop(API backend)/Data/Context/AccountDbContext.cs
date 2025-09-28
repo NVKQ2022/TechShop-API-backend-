@@ -13,8 +13,9 @@ namespace TechShop_API_backend_.Data.Context
 public class AccountDbContext : DbContext
     {
         public DbSet<User> Users { get; set; }
+        public DbSet<UserId> UserId { get; set; }
 
-        
+
 
         public AccountDbContext(DbContextOptions<AccountDbContext> options) : base(options) { }
     }

@@ -38,6 +38,24 @@ namespace TechShop_API_backend_.Data
                 }
             }
         }
+        //public int AssignId()
+        //{
+        //    using (SqlConnection connection = new SqlConnection(_connectionString))
+        //    {
+        //        string query = @"SELECT Id FROM userId";
+        //        SqlCommand command = new SqlCommand(query, connection);
+        //        connection.Open();
+        //        SqlDataReader reader = command.ExecuteReader();
+
+        //        if (reader.Read())
+        //        {
+        //            return reader.GetInt32(0) + 1;
+        //        }
+
+        //        return 10000; // Trả về null nếu sai tài khoản/mật khẩu
+        //    }
+        //}
+
 
 
 

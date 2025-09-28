@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using TechShop_API_backend_.Models;
 using TechShop_API_backend_.Data;
 using System.ComponentModel;
+using Microsoft.AspNetCore.Identity.Data;
+using TechShop_API_backend_.Service;
+using System.Security.Claims;
+using TechShop_API_backend_.Models.Api;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -14,11 +18,13 @@ namespace TechShop_API_backend_.Controllers
     public class AuthenticateController : ControllerBase
     {
         UserRepository _userRepository;
+        JwtService _jwtService;
 
-        public AuthenticateController(UserRepository userRepository)
+        public AuthenticateController(UserRepository userRepository, JwtService jwtService)
         {
             _userRepository = userRepository;
-        }   
+            _jwtService = jwtService;
+        }
 
 
         // GET: api/<AuthenticateController>
@@ -30,15 +36,16 @@ namespace TechShop_API_backend_.Controllers
         //}
 
         // GET api/<AuthenticateController>/5
-        [HttpGet("{id}")]
-        public async  Task<IActionResult> Get(int id)
+        [AllowAnonymous]
+        [HttpPost("login")]
+        public async  Task<ActionResult<LoginResponse>> Login( Models.Api.LoginRequest loginRequest)
         {
-            User? user = await _userRepository.GetUserByIdAsync(id);
-            if(user == null)
+            var result = await _jwtService.Authenticate(loginRequest);
+            if (result == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
-            return Ok(user);
+            return result;
         }
 
         // POST api/<AuthenticateController>
@@ -46,7 +53,7 @@ namespace TechShop_API_backend_.Controllers
 
         [AllowAnonymous]
         [HttpPost("register")]
-        public async Task<IActionResult> Post([FromBody] User newUser)
+        public async Task<IActionResult> Register([FromBody] User newUser)
         {
             if (!ModelState.IsValid)
             {
@@ -57,7 +64,7 @@ namespace TechShop_API_backend_.Controllers
 
 
 
-            return CreatedAtAction(nameof(Get), new { id = createdUser.Id }, createdUser);
+            return CreatedAtAction(nameof(Login), new { id = createdUser.Id }, createdUser); // fixed to point to Login action
         }
 
         // PUT api/<AuthenticateController>/5

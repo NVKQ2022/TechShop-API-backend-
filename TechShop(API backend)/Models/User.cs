@@ -23,4 +23,9 @@ namespace TechShop_API_backend_.Models
         }
 
     }
+    public class UserId
+    {
+        public int Id { get; set; }
+       
+    }
 }
