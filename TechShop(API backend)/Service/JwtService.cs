@@ -45,11 +45,12 @@ namespace TechShop_API_backend_.Service
                 return null;
             }
             var user = await userRepository.GetUserByUsernameAsync(request.Username);
-            if (user == null || SecurityHelper.VerifyPassword(request.Password, user.Password, user.Salt))
+            if (user == null|| !SecurityHelper.VerifyPassword(request.Password, user.Salt, user.Password))
             {
                 return null;
             }
-            
+           
+
             return new LoginResponse 
             { 
                 Token = GenerateToken(user), 
