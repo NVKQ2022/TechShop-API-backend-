@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Identity.Data;
 using TechShop_API_backend_.Service;
 using System.Security.Claims;
 using TechShop_API_backend_.Models.Api;
+using TechShop_API_backend_.DTOs.User;
+using TechShop_API_backend_.Helpers;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -54,7 +56,7 @@ namespace TechShop_API_backend_.Controllers
 
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<ActionResult<LoginResponse>> Login(Models.Api.LoginRequest loginRequest)
+        public async Task<ActionResult<LoginResponse>> Login(Models.Api.LoginRequest loginRequest) // DONE
         {
             // Input validation
             if (loginRequest == null)
@@ -99,39 +101,53 @@ namespace TechShop_API_backend_.Controllers
 
         [AllowAnonymous]
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] User newUser)
+        public async Task<IActionResult> Register([FromBody] CreateUserDto newUser) //DONE
         {
             // 1. Input validation
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
+            var result = SecurityHelper.CheckPasswordStrength(newUser.Password);
+            if (result.IsStrong == false)
+            {
+                return BadRequest($"The password  is not strong enough");
+            }
 
             // 2. Check if the email or username already exists
-            var existingUserByEmail = await _userRepository.GetUserByEmailAsync(newUser.Email);
-            if (existingUserByEmail != null)
-            {
-                _logger.LogWarning("Registration failed: Email {Email} is already in use.", newUser.Email);
-                return Conflict(new { Message = "Email is already in use." });
-            }
+            //var existingUserByEmail = await _userRepository.GetUserByEmailAsync(newUser.Email);
+            //if (existingUserByEmail != null)
+            //{
+            //    _logger.LogWarning("Registration failed: Email {Email} is already in use.", newUser.Email);
+            //    return Conflict(new { Message = "Email is already in use." });
+            //}
 
-            var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(newUser.Username);
-            if (existingUserByUsername != null)
-            {
-                _logger.LogWarning("Registration failed: Username {Username} is already in use.", newUser.Username);
-                return Conflict(new { Message = "Username is already in use." });
-            }
+            //var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(newUser.Username);
+            //if (existingUserByUsername != null)
+            //{
+            //    _logger.LogWarning("Registration failed: Username {Username} is already in use.", newUser.Username);
+            //    return Conflict(new { Message = "Username is already in use." });
+            //}
 
             try
             {
                 // 3. Create the user with hashed password
                 var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, false);
-
+                if (createdUser.ErrorMessage == "Email already exists")
+                {
+                    _logger.LogWarning("Registration failed: Email {Email} is already in use.", newUser.Email);
+                    return Conflict(new { Message = "Email is already in use." });
+                }
+                if (createdUser.ErrorMessage == "Username already exists")
+                {
+                    _logger.LogWarning("Registration failed: Username {Username} is already in use.", newUser.Username);
+                    return Conflict(new { Message = "Username is already in use." });
+                }
                 // 4. Log successful registration
                 _logger.LogInformation("User successfully registered: {Username}.", newUser.Username);
 
                 // 5. Return CreatedAtAction for the login endpoint to indicate successful creation
-                return CreatedAtAction(nameof(Login), new { id = createdUser.Id }, createdUser); // Respond with status 201 Created
+                return CreatedAtAction(nameof(Login), new { id = createdUser.CreatedUser.Id }, createdUser); // Respond with status 201 Created
             }
             catch (Exception ex)
             {
@@ -147,7 +163,7 @@ namespace TechShop_API_backend_.Controllers
         {
         }
 
-        // DELETE api/<AuthenticateController>/5
+        // DELETE api/<AuthenticateController>/D
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

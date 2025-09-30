@@ -24,12 +24,58 @@ namespace TechShop_API_backend_.Data
         }
 
         // CREATE
-        public async Task<User> CreateUserAsync(string email, string username, string password, bool isAdmin = false)
+        //public async Task<User> CreateUserAsync(string email, string username, string password, bool isAdmin = false)
+        //{
+        //    // Generate salt
+        //    var salt = SecurityHelper.GenerateSalt();
+        //    var hashedPassword = SecurityHelper.HashPassword(password, salt);
+        //    var newId = await AssignIdAsync();
+        //    var user = new User
+        //    {
+        //        Id = newId,
+        //        Email = email,
+        //        Username = username,
+        //        Password = hashedPassword,
+        //        Salt = salt,
+        //        IsAdmin = isAdmin
+        //    };
+        //    var userDetail = new UserDetail
+        //    {
+        //        UserId = newId,
+        //        Avatar = String.Empty,
+        //        Category = new Dictionary<string, int>(),
+        //        Cart = new List<CartItem>(),
+        //        ReceiveInfo = new List<ReceiveInfo>(),
+        //        PhoneNumber = string.Empty,
+        //        Gender = string.Empty,
+        //        Birthday = new DateTime(),
+        //        Banking = new Banking()
+        //    };
+
+        //    _context.Users.Add(user);
+        //    await userDetailRepository.AddUserDetailAsync(userDetail);
+        //    await _context.SaveChangesAsync();
+
+        //    return user;
+        //}
+
+        // READ
+
+        public async Task<(bool Success, string ErrorMessage, User? CreatedUser)> CreateUserAsync(
+    string email, string username, string password, bool isAdmin = false)
         {
-            // Generate salt
+            // 1. Check duplicates (app-level validation for nice UX)
+            if (await _context.Users.AnyAsync(u => u.Email == email))
+                return (false, "Email already exists", null);
+
+            if (await _context.Users.AnyAsync(u => u.Username == username))
+                return (false, "Username already exists", null);
+
+            // 2. Prepare user data
             var salt = SecurityHelper.GenerateSalt();
             var hashedPassword = SecurityHelper.HashPassword(password, salt);
             var newId = await AssignIdAsync();
+
             var user = new User
             {
                 Id = newId,
@@ -39,26 +85,42 @@ namespace TechShop_API_backend_.Data
                 Salt = salt,
                 IsAdmin = isAdmin
             };
+
             var userDetail = new UserDetail
             {
                 UserId = newId,
-                Avatar = String.Empty,
+                Avatar = string.Empty,
                 Category = new Dictionary<string, int>(),
                 Cart = new List<CartItem>(),
                 ReceiveInfo = new List<ReceiveInfo>(),
                 PhoneNumber = string.Empty,
                 Gender = string.Empty,
-                Birthday = new DateTime(),
+                Birthday = DateTime.MinValue,
                 Banking = new Banking()
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            // 3. Save to DB
+            try
+            {
+                _context.Users.Add(user);
+                await userDetailRepository.AddUserDetailAsync(userDetail);
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                // Safety net: In case a duplicate slipped through due to race condition
+                if (ex.InnerException?.Message.Contains("UQ_EMAIL") == true)
+                    return (false, "Email already exists", null);
 
-            return user;
+                if (ex.InnerException?.Message.Contains("UQ_USERNAME") == true)
+                    return (false, "Username already exists", null);
+
+                throw; // rethrow if it's another kind of error
+            }
+
+            return (true, string.Empty, user);
         }
 
-        // READ
         public async Task<User?> GetUserByIdAsync(int id)
         {
             return await _context.Users.FindAsync(id);

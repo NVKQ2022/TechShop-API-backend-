@@ -17,7 +17,11 @@ namespace TechShop_API_backend_.Data
             _userDetail = database.GetCollection<UserDetail>(settings.Value.UserDetailCollectionName);
         }
 
-
+        public async Task<bool> DeleteUserDetailAsync(int userId)
+        {
+            var result = await _userDetail.DeleteOneAsync(u => u.UserId == userId);
+            return result.DeletedCount > 0;
+        }
         public async Task<bool> UpdateUserDetailAsync(int userId, UserDetail updatedUserDetail) // set to null if dont update
         {
             // Define the filter to find the document by UserId

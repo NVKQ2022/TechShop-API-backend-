@@ -13,6 +13,7 @@ namespace TechShop_API_backend_.Interfaces
     public interface IUserDetailRepository
     {
         Task AddUserDetailAsync(UserDetail user);
+        Task<bool> DeleteUserDetailAsync(int userId);
 
         Task<bool> UpdateUserInfo(int userId,string name, string phoneNumber, string gender, DateTime birthDay);
 

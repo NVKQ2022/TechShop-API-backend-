@@ -16,7 +16,7 @@ namespace TechShop_API_backend_.Models
         [Required]
         public string Salt {  get; set; }
 
-        public bool IsAdmin = false;
+        public bool IsAdmin { get; set; } = false;
         public User()
         {
 

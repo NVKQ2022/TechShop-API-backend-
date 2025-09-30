@@ -68,7 +68,38 @@ namespace TechShop_API_backend_.Helpers
             string newHash = HashPassword(inputPassword, storedSalt);
             return storedHash == newHash;
         }
+        public static (bool IsStrong, string Rating) CheckPasswordStrength(string password)
+        {
+            if (string.IsNullOrWhiteSpace(password))
+                return (false, "Weak");
 
+            bool hasMinimumLength = password.Length >= 8;
+            bool hasUpper = password.Any(char.IsUpper);
+            bool hasLower = password.Any(char.IsLower);
+            bool hasDigit = password.Any(char.IsDigit);
+            bool hasSpecial = password.Any(ch => !char.IsLetterOrDigit(ch));
+
+            int score = 0;
+            if (hasMinimumLength) score++;
+            if (hasUpper) score++;
+            if (hasLower) score++;
+            if (hasDigit) score++;
+            if (hasSpecial) score++;
+
+            // Determine if password is strong
+            bool isStrong = hasMinimumLength && hasUpper && hasLower && hasDigit && hasSpecial;
+
+            // Determine rating
+            string rating = score switch
+            {
+                <= 2 => "Weak",
+                3 or 4 => "Medium",
+                5 => "Strong",
+                _ => "Weak"
+            };
+
+            return (isStrong, rating);
+        }
         public static void SendOPTEmail(string targetEmail, string subject, string body)
         {
             string yourEmail = "nguyenvietkyquan@gmail.com";
