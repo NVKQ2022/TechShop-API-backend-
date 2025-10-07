@@ -62,7 +62,7 @@ namespace TechShop_API_backend_.Data
         // READ
 
         public async Task<(bool Success, string ErrorMessage, User? CreatedUser)> CreateUserAsync(
-    string email, string username, string password, bool isAdmin = false)
+    string email, string username, string password, bool isAdmin = false, bool isEmailVerified= false)
         {
             // 1. Check duplicates (app-level validation for nice UX)
             if (await _context.Users.AnyAsync(u => u.Email == email))
@@ -83,7 +83,9 @@ namespace TechShop_API_backend_.Data
                 Username = username,
                 Password = hashedPassword,
                 Salt = salt,
-                IsAdmin = isAdmin
+                IsAdmin = isAdmin,
+                IsEmailVerified = isEmailVerified // For future email verification feature
+
             };
 
             var userDetail = new UserDetail

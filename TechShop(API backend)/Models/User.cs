@@ -17,6 +17,8 @@ namespace TechShop_API_backend_.Models
         public string Salt {  get; set; }
 
         public bool IsAdmin { get; set; } = false;
+
+        public bool IsEmailVerified { get; set; } = false;
         public User()
         {
 

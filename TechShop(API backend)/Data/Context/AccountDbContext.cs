@@ -15,7 +15,7 @@ public class AccountDbContext : DbContext
         public DbSet<User> Users { get; set; }
         public DbSet<UserId> UserId { get; set; }
 
-
+        public DbSet<AuthProvider> AuthProviders { get; set; }
 
         public AccountDbContext(DbContextOptions<AccountDbContext> options) : base(options) { }
     }

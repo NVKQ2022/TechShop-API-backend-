@@ -131,6 +131,12 @@ namespace TechShop_API_backend_.Controllers
 
             try
             {
+
+                // verified email 
+
+
+
+
                 // 3. Create the user with hashed password
                 var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, false);
                 if (createdUser.ErrorMessage == "Email already exists")
