@@ -13,5 +13,10 @@ namespace TechShop_API_backend_.DTOs.User
 
         [Required, MinLength(8)]
         public string Password { get; set; }
+
+        [Required, MinLength(8)]
+        public string ConfirmPassword { get; set; }
+
+
     }
 }

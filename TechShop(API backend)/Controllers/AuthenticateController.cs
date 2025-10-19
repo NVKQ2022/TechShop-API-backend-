@@ -108,26 +108,16 @@ namespace TechShop_API_backend_.Controllers
             {
                 return BadRequest(ModelState);
             }
+            if( newUser.Password != newUser.ConfirmPassword)
+            {
+                return BadRequest("Password and Confirm Password do not match");
+            }
+
             var result = SecurityHelper.CheckPasswordStrength(newUser.Password);
             if (result.IsStrong == false)
             {
                 return BadRequest($"The password  is not strong enough");
             }
-
-            // 2. Check if the email or username already exists
-            //var existingUserByEmail = await _userRepository.GetUserByEmailAsync(newUser.Email);
-            //if (existingUserByEmail != null)
-            //{
-            //    _logger.LogWarning("Registration failed: Email {Email} is already in use.", newUser.Email);
-            //    return Conflict(new { Message = "Email is already in use." });
-            //}
-
-            //var existingUserByUsername = await _userRepository.GetUserByUsernameAsync(newUser.Username);
-            //if (existingUserByUsername != null)
-            //{
-            //    _logger.LogWarning("Registration failed: Username {Username} is already in use.", newUser.Username);
-            //    return Conflict(new { Message = "Username is already in use." });
-            //}
 
             try
             {
@@ -151,9 +141,15 @@ namespace TechShop_API_backend_.Controllers
                 }
                 // 4. Log successful registration
                 _logger.LogInformation("User successfully registered: {Username}.", newUser.Username);
+                var token = await _jwtService.Authenticate(
+                new Models.Api.LoginRequest
+                {
+                    Username = newUser.Username,
+                    Password = newUser.Password
+                });
 
                 // 5. Return CreatedAtAction for the login endpoint to indicate successful creation
-                return CreatedAtAction(nameof(Login), new { id = createdUser.CreatedUser.Id }, createdUser); // Respond with status 201 Created
+                return Ok(token); // Respond with status 201 Created
             }
             catch (Exception ex)
             {

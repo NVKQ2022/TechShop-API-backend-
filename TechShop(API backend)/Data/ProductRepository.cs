@@ -45,6 +45,39 @@ public class ProductRepository:IProductRepository
         return await _products.Find(p => true).ToListAsync();
     }
 
+
+
+    public async Task<List<Product>> GetRandomProductAsync(int number, List<string> categories)
+    {
+        // Create the base pipeline
+        var pipeline = new List<BsonDocument>();
+
+        // If categories is not null and not empty, filter by categories
+        if (categories != null && categories.Any())
+        {
+            pipeline.Add(new BsonDocument
+            {
+                { "$match", new BsonDocument { { "Category", new BsonDocument { { "$in", new BsonArray(categories) } } } } }
+            });
+        }
+
+        // Add the $sample stage to get random products (after any filtering)
+        pipeline.Add(new BsonDocument
+        {
+            { "$sample", new BsonDocument { { "size", number } } }
+        });
+
+        // Run the aggregation with the constructed pipeline
+        var result = await _products.AggregateAsync<Product>(pipeline);
+
+        // Return the random products, either filtered by category or not
+        return await result.ToListAsync();
+    }
+
+
+
+
+
     public async Task<string?> GetCategoryByProductIdAsync(string productId)
     {
         var filter = Builders<Product>.Filter.Eq(p => p.ProductId, productId);

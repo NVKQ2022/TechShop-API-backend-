@@ -6,6 +6,7 @@ using TechShop_API_backend_.Data.Context;
 using TechShop_API_backend_.Models;
 using TechShop_API_backend_.Service;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -17,7 +18,8 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<AuthenticationRepository>();
 builder.Services.AddScoped<UserDetailRepository>();
-
+builder.Services.AddScoped<ProductRepository>();
+builder.Services.AddScoped<ReviewRepository>();
 // Add service configurations
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
@@ -34,6 +36,17 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AccountDbContext>(options =>
     options.UseSqlServer(Environment.GetEnvironmentVariable("ConnectionString__UserDatabase")));
 
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy
+            .AllowAnyOrigin()   
+            .AllowAnyMethod()  
+            .AllowAnyHeader();
+    });
+});
 
 builder.Services.AddAuthentication(options =>
 {
@@ -92,6 +105,7 @@ if (app.Environment.IsDevelopment())
 {
     
 }
+app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
 
