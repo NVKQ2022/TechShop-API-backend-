@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
-namespace TechShop_API_backend_.Models
+namespace TechShop_API_backend_.Models.Authenticate
 {
     [Table("auth_providers")]
     public class AuthProvider

@@ -100,33 +100,9 @@ namespace TechShop_API_backend_.Helpers
 
             return (isStrong, rating);
         }
-        public static void SendOPTEmail(string targetEmail, string subject, string body)
-        {
-            string yourEmail = "nguyenvietkyquan@gmail.com";
-            string yourPassword = "12345678";
+       
 
-            try
-            {
-                MailMessage mail = new MailMessage();
-                mail.From = new MailAddress(yourEmail);
-                mail.To.Add(targetEmail);
-                mail.Subject = subject;
-                mail.Body = body;
 
-                SmtpClient smtpServer = new SmtpClient("smtp.gmail.com");
-                smtpServer.Port = 587;
-                smtpServer.Credentials = new NetworkCredential(yourEmail, yourPassword);
-                smtpServer.EnableSsl = true;
 
-                smtpServer.Send(mail);
-                Console.WriteLine("Email sent successfully!");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Failed to send email. Error: " + ex.Message);
-            }
-        }
-
-         
     }
 }

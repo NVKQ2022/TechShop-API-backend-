@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using TechShop_API_backend_.DTOs.Order;
 using TechShop_API_backend_.Interfaces;
 using TechShop_API_backend_.Models;
 
@@ -59,6 +60,37 @@ namespace TechShop_API_backend_.Data
             await _orders.InsertOneAsync(order);
             // decrease // stock of each product in the order
         }
+
+
+
+
+        public async Task<bool> UpdateOrderAsync(string orderId, UpdateOrderRequest request)
+        {
+            var order = await _orders.Find(o => o.OrderID == orderId).FirstOrDefaultAsync();
+
+            if (order == null)
+                return false;
+
+            // Update item quantities
+            foreach (var updateItem in request.Items)
+            {
+                var existingItem = order.Items.FirstOrDefault(i => i.ProductID == updateItem.ProductID);
+                if (existingItem != null)
+                {
+                    existingItem.Quantity = updateItem.Quantity;
+                }
+            }
+
+            // Update receive info
+            if (request.ReceiveInfo != null)
+            {
+                order.ReceiveInfo = request.ReceiveInfo;
+            }
+
+            var result = await _orders.ReplaceOneAsync(o => o.OrderID == orderId, order);
+            return result.ModifiedCount > 0;
+        }
+
         public async Task<bool> UpdateOrderStatusAsync(string orderId, string newStatus)
         {
             var filter = Builders<Order>.Filter.Eq(o => o.OrderID, orderId);

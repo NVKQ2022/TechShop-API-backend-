@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TechShop_API_backend_.Models;
-using TechShop_API_backend_.Data;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Identity.Data;
 using TechShop_API_backend_.Service;
@@ -9,6 +8,7 @@ using System.Security.Claims;
 using TechShop_API_backend_.Models.Api;
 using TechShop_API_backend_.DTOs.User;
 using TechShop_API_backend_.Helpers;
+using TechShop_API_backend_.Data.Authenticate;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -21,6 +21,7 @@ namespace TechShop_API_backend_.Controllers
     {
         UserRepository _userRepository;
         JwtService _jwtService;
+        EmailService emailService;
         private readonly ILogger<AuthenticateController> _logger;
 
         public AuthenticateController(UserRepository userRepository, JwtService jwtService, ILogger<AuthenticateController> logger)
@@ -158,6 +159,86 @@ namespace TechShop_API_backend_.Controllers
                 return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
             }
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+        [AllowAnonymous]
+        [HttpPost("testEmail/Verify")]
+        public async Task<IActionResult> EmailVerify(string targetEmail="23521267@gm.uit.edu.vn") //DONE
+        {
+           
+
+            try
+            {
+
+                // verified email 
+
+               
+                EmailService.SendVerificationEmail(targetEmail, "1234567890");
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
+            }
+        }
+
+
+        [AllowAnonymous]
+        [HttpPost("testEmail/Opt")]
+        public async Task<IActionResult> EmailOPT(string targetEmail = "23521267@gm.uit.edu.vn") //DONE
+        {
+
+
+            try
+            {
+
+                // verified email 
+
+
+               
+                EmailService.SendOptEmail(targetEmail, "654321");
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // PUT api/<AuthenticateController>/5
         [HttpPut("{id}")]

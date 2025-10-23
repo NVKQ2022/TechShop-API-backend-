@@ -1,4 +1,4 @@
-﻿using TechShop_API_backend_.Models;
+﻿using TechShop_API_backend_.Models.Authenticate;
 namespace TechShop_API_backend_.Interfaces
 {
     public interface ISessionRepository

@@ -1,10 +1,10 @@
 ﻿using System.Data.SqlClient;
-using TechShop_API_backend_.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using TechShop_API_backend_.Interfaces;
 using TechShop_API_backend_.Helpers;
 using MongoDB.Driver.Core.Configuration;
+using TechShop_API_backend_.Models.Authenticate;
 
 //using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 

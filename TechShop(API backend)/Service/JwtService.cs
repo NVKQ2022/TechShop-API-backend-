@@ -3,12 +3,12 @@ using TechShop_API_backend_.Models.Api;
 using TechShop_API_backend_.Helpers;
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
-using TechShop_API_backend_.Models;
-using TechShop_API_backend_.Data;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using MongoDB.Driver.Linq;
+using TechShop_API_backend_.Models.Authenticate;
+using TechShop_API_backend_.Data.Authenticate;
 namespace TechShop_API_backend_.Service
 
 

@@ -4,9 +4,10 @@ using TechShop_API_backend_.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using MongoDB.Driver.Core.Configuration;
+using TechShop_API_backend_.Models.Authenticate;
 
 
-namespace TechShop_API_backend_.Data
+namespace TechShop_API_backend_.Data.Authenticate
 {
     public class UserRepository
     {
@@ -23,46 +24,10 @@ namespace TechShop_API_backend_.Data
             this.userDetailRepository = userDetailRepository;
         }
 
-        // CREATE
-        //public async Task<User> CreateUserAsync(string email, string username, string password, bool isAdmin = false)
-        //{
-        //    // Generate salt
-        //    var salt = SecurityHelper.GenerateSalt();
-        //    var hashedPassword = SecurityHelper.HashPassword(password, salt);
-        //    var newId = await AssignIdAsync();
-        //    var user = new User
-        //    {
-        //        Id = newId,
-        //        Email = email,
-        //        Username = username,
-        //        Password = hashedPassword,
-        //        Salt = salt,
-        //        IsAdmin = isAdmin
-        //    };
-        //    var userDetail = new UserDetail
-        //    {
-        //        UserId = newId,
-        //        Avatar = String.Empty,
-        //        Category = new Dictionary<string, int>(),
-        //        Cart = new List<CartItem>(),
-        //        ReceiveInfo = new List<ReceiveInfo>(),
-        //        PhoneNumber = string.Empty,
-        //        Gender = string.Empty,
-        //        Birthday = new DateTime(),
-        //        Banking = new Banking()
-        //    };
 
-        //    _context.Users.Add(user);
-        //    await userDetailRepository.AddUserDetailAsync(userDetail);
-        //    await _context.SaveChangesAsync();
-
-        //    return user;
-        //}
-
-        // READ
 
         public async Task<(bool Success, string ErrorMessage, User? CreatedUser)> CreateUserAsync(
-    string email, string username, string password, bool isAdmin = false, bool isEmailVerified= false)
+    string email, string username, string password, bool isAdmin = false, bool isEmailVerified = false)
         {
             // 1. Check duplicates (app-level validation for nice UX)
             if (await _context.Users.AnyAsync(u => u.Email == email))

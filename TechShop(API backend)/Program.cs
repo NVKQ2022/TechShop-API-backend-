@@ -7,6 +7,7 @@ using TechShop_API_backend_.Models;
 using TechShop_API_backend_.Service;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
+using TechShop_API_backend_.Data.Authenticate;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -20,6 +21,8 @@ builder.Services.AddScoped<AuthenticationRepository>();
 builder.Services.AddScoped<UserDetailRepository>();
 builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<ReviewRepository>();
+builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddScoped<EmailService>();
 // Add service configurations
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));

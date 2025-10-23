@@ -65,6 +65,25 @@ namespace TechShop_API_backend_.Controllers
         }
 
 
+        // GET: api/<ProductController>
+        [AllowAnonymous]  // Allows anonymous users to access this endpoint
+        [HttpGet("Fetch/{category}/{number}")]
+        public async Task<IActionResult> GetListProductsƯithCategory(int number, string category)
+        {
+            
+
+            List<Product> products;
+
+            products = await productRepository.GetByCategoryAsync(category);
+           
+
+            // Convert the list of products into the required format (e.g., a zip list or any transformation)
+            var productZip = converterHelper.ConvertProductListToProductZipList(products);
+
+            return Ok(productZip); // Return the transformed list to the client
+        }
+
+
 
 
 

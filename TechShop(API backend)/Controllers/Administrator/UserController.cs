@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using TechShop_API_backend_.DTOs.User;
 using TechShop_API_backend_.Helpers;
+using TechShop_API_backend_.Models.Authenticate;
+using TechShop_API_backend_.Data.Authenticate;
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace TechShop_API_backend_.Controllers.Administrator
