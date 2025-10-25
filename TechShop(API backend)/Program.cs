@@ -8,6 +8,9 @@ using TechShop_API_backend_.Service;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
 using TechShop_API_backend_.Data.Authenticate;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using TechShop.API.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -22,6 +25,7 @@ builder.Services.AddScoped<UserDetailRepository>();
 builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddScoped<VerificationCodeRepository>();
 builder.Services.AddScoped<EmailService>();
 // Add service configurations
 builder.Services.Configure<MongoDbSettings>(
@@ -31,13 +35,12 @@ builder.Services.Configure<MongoDbSettings>(
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//var connectionString = Environment.GetEnvironmentVariable("ConnectionString__UserDatabase");
-//builder.Services.AddDbContext<AccountDbContext>(options =>
-//    options.UseSqlServer(builder.Configuration.GetConnectionString("UserDatabase")));
-
-
-builder.Services.AddDbContext<AccountDbContext>(options =>
+builder.Services.AddDbContext<AuthenticateDbContext>(options =>
     options.UseSqlServer(Environment.GetEnvironmentVariable("ConnectionString__UserDatabase")));
+//;
+
+
+
 
 
 builder.Services.AddCors(options =>
@@ -76,7 +79,7 @@ option.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValid
 
 
 
-
+// ADD SWAGGER WITH JWT AUTHENTICATE
 builder.Services.AddSwaggerGen(options =>
 {
     var jwtSecurityScheme = new OpenApiSecurityScheme
@@ -101,6 +104,25 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 
+
+// ADD RATE LIMITER
+
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("authenticate", opt =>
+    {
+        opt.PermitLimit = 4;
+        opt.Window = TimeSpan.FromSeconds(12);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 2;
+    });
+});
+
+
+
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -111,13 +133,19 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 app.UseSwagger();
 app.UseSwaggerUI();
-
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
-
-
 app.MapControllers();
+
+
+
+// Enable rate limiting 
+app.UseRateLimiter();
+//authenticated rate limited endpoint 
+app.MapGet("/api/Authenticate", () => "This endpoint is rate limited")
+   .RequireRateLimiting("authenticate"); // Apply specific policy to an endpoint
+
+
 
 app.Run();

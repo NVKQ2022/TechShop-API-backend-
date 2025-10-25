@@ -9,11 +9,10 @@ namespace TechShop_API_backend_.Helpers
     public class SecurityHelper
     {
         private static readonly string myPepper = Environment.GetEnvironmentVariable("Security__Pepper");
-        private static readonly string serverEmail = Environment.GetEnvironmentVariable("Security__Email");
-        private static readonly string serverEmailPassword = Environment.GetEnvironmentVariable("Security__Password");
+
         public SecurityHelper(/*IConfiguration configuration*/)
         {
-            //myPepper = configuration["Security:Pepper"];
+        
         }
 
         public static string GenerateSessionId(int length = 32) // use when login
@@ -100,8 +99,31 @@ namespace TechShop_API_backend_.Helpers
 
             return (isStrong, rating);
         }
-       
 
+        public static string GenerateOTP(int length = 6)
+        {
+            if (length <= 0 || length > 10)
+                throw new ArgumentOutOfRangeException(nameof(length), "OTP length must be between 1 and 10.");
+
+            // Use a cryptographically secure random number generator
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                // Each digit of the OTP
+                var otp = new char[length];
+
+                byte[] randomBytes = new byte[length];
+
+                rng.GetBytes(randomBytes);
+
+                for (int i = 0; i < length; i++)
+                {
+                    // Convert each byte to a digit (0–9)
+                    otp[i] = (char)('0' + (randomBytes[i] % 10));
+                }
+
+                return new string(otp);
+            }
+        }
 
 
     }

@@ -9,6 +9,11 @@ using TechShop_API_backend_.Models.Api;
 using TechShop_API_backend_.DTOs.User;
 using TechShop_API_backend_.Helpers;
 using TechShop_API_backend_.Data.Authenticate;
+using TechShop_API_backend_.Models.Authenticate;
+using MongoDB.Driver;
+using static System.Net.WebRequestMethods;
+using TechShop.API.Models;
+using TechShop.API.Repositories;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -20,12 +25,14 @@ namespace TechShop_API_backend_.Controllers
     public class AuthenticateController : ControllerBase
     {
         UserRepository _userRepository;
+        VerificationCodeRepository _verificationCodeRepository;
         JwtService _jwtService;
         EmailService emailService;
         private readonly ILogger<AuthenticateController> _logger;
 
-        public AuthenticateController(UserRepository userRepository, JwtService jwtService, ILogger<AuthenticateController> logger)
+        public AuthenticateController(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger)
         {
+            _verificationCodeRepository = verificationCodeRepository;
             _userRepository = userRepository;
             _jwtService = jwtService;
             _logger = logger;
@@ -173,7 +180,7 @@ namespace TechShop_API_backend_.Controllers
 
 
         [AllowAnonymous]
-        [HttpPost("testEmail/Verify")]
+        [HttpPost("test/EmailVerify/{targetEmail}")]
         public async Task<IActionResult> EmailVerify(string targetEmail="23521267@gm.uit.edu.vn") //DONE
         {
            
@@ -194,32 +201,118 @@ namespace TechShop_API_backend_.Controllers
             }
         }
 
-
-        [AllowAnonymous]
-        [HttpPost("testEmail/Opt")]
-        public async Task<IActionResult> EmailOPT(string targetEmail = "23521267@gm.uit.edu.vn") //DONE
+        [Authorize]
+        [HttpGet("Email/Opt")]
+        public async Task<IActionResult> EmailOPT()
         {
-
-
             try
             {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                    return BadRequest("Invalid user ID.");
 
-                // verified email 
+                if (!int.TryParse(userId, out int parsedUserId))
+                    return BadRequest("Invalid user ID format.");
+
+                var user = await _userRepository.GetUserByIdAsync(parsedUserId);
+                if (user == null)
+                    return BadRequest("User not found.");
+
+                var otp = SecurityHelper.GenerateOTP(6);
+
+                EmailService.SendOptEmail(user.Email, otp);
+
+                var verificationCode = new VerificationCode
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Code = otp,
+                    Type = "EMAIL_VERIFY",
+                    ExpiresAt = DateTime.Now.AddMinutes(10),
+                    IsUsed = false,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _verificationCodeRepository.CreateAsync(verificationCode);
+
+                return Ok(new
+                {
+                    Message = "Verification email sent successfully.",
+                    Email = user.Email
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An error occurred while processing your request.",
+                    Error = ex.Message,
+                    Inner = ex.InnerException?.Message
+                });
+            }
+        }
 
 
-               
-                EmailService.SendOptEmail(targetEmail, "654321");
 
-                return Ok();
+        [AllowAnonymous]
+        [HttpPost("test")]
+        public async Task<IActionResult> TestOTP() //DONE
+        {
+            try
+            {
+                var verificationCode = new VerificationCode
+                {
+                    UserId = 10096,
+                    Email = "123124",
+                    Code = "12314",
+                    Type = "EMAIL_VERIFY",
+                    ExpiresAt = DateTime.Now.AddMinutes(10),
+                    IsUsed = false,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _verificationCodeRepository.CreateAsync(verificationCode);
+                return Ok("OTP code has been sent.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An error occurred while processing your request.",
+                    Error = ex.Message,
+                    Inner = ex.InnerException?.Message
+                });
+            }
+        }
+
+
+
+
+        [AllowAnonymous]
+        [HttpPost("testEmail/Opt/Verify/{otp}")]
+        public async Task<IActionResult> OPTVerify(string otp) //DONE
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+              
+
+                var isMatched =await _verificationCodeRepository.VerifyAsync(int.Parse(userId!), "EMAIL_VERIFY",otp);
+
+                if (isMatched) 
+                {
+                    return Ok("Verified");
+                }
+                else
+                {
+                    return BadRequest("Wrong otp code");
+                }
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
             }
         }
-
-
-
 
 
 

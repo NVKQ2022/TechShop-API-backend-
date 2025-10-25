@@ -12,12 +12,12 @@ namespace TechShop_API_backend_.Data.Authenticate
     public class UserRepository
     {
 
-        private readonly AccountDbContext _context;
+        private readonly AuthenticateDbContext _context;
         private readonly AuthenticationRepository authenticationRepository;
         private readonly UserDetailRepository userDetailRepository;
         private static readonly string _connectionString = Environment.GetEnvironmentVariable("ConnectionString__UserDatabase") ?? throw new InvalidOperationException("Database connection string not configured");
 
-        public UserRepository(AccountDbContext context, AuthenticationRepository authenticationRepository, UserDetailRepository userDetailRepository)
+        public UserRepository(AuthenticateDbContext context, AuthenticationRepository authenticationRepository, UserDetailRepository userDetailRepository)
         {
             _context = context;
             this.authenticationRepository = authenticationRepository;

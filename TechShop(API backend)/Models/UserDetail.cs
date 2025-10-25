@@ -1,5 +1,6 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Bson;
+using TechShop_API_backend_.Models;
 
 namespace TechShop_API_backend_.Models
 {
