@@ -27,6 +27,7 @@ builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<VerificationCodeRepository>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<ImageService>();
 // Add service configurations
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));

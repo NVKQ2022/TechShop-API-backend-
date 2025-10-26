@@ -14,6 +14,28 @@ namespace TechShop_API_backend_.Data
             var database = client.GetDatabase(settings.Value.DatabaseName);
             reviewCollection = database.GetCollection<Review>(settings.Value.ReviewCollectionName);
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        public async Task<List<Review>> GetAllAsync() =>
+          await reviewCollection.Find(_ => true).ToListAsync();
+
         public async Task CreateReviewAsync(Review review)
         {
             try
@@ -40,5 +62,21 @@ namespace TechShop_API_backend_.Data
             var filter = Builders<Review>.Filter.Eq(r => r.UserID, userId);
             return await reviewCollection.Find(filter).ToListAsync();
         }
+
+
+
+
+        public async Task<bool> DeleteReviewWithIDAsync(string id)
+        {
+            if (string.IsNullOrEmpty(id)) throw new ArgumentException("Review ID cannot be null or empty.");
+
+            var filter = Builders<Review>.Filter.Eq(r => r.ReviewId, id);
+            var result = await reviewCollection.DeleteOneAsync(filter);
+
+            return result.DeletedCount > 0;
+        }
+
+        
+
     }
 }
