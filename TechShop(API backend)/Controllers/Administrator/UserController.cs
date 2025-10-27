@@ -56,7 +56,7 @@ namespace TechShop_API_backend_.Controllers.Administrator
                 return BadRequest(ModelState);
             }
 
-            var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, false);
+            var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, string.Empty,false);
 
 
 

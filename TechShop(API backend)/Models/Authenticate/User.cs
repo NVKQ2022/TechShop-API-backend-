@@ -19,6 +19,8 @@ namespace TechShop_API_backend_.Models.Authenticate
         public bool IsAdmin { get; set; } = false;
 
         public bool IsEmailVerified { get; set; } = false;
+
+        public string? GOOGLE_ID{ get; set; } = string.Empty;
         public User()
         {
 

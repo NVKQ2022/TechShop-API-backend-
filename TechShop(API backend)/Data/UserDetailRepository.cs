@@ -147,7 +147,7 @@ namespace TechShop_API_backend_.Data
                 throw new Exception("User not found.");
             }
 
-            var existingItem = user.Cart.FirstOrDefault(i => i.ProductId == item.ProductId); 
+            var existingItem = user.Cart.FirstOrDefault(i => i.Product.Product_zipId == item.Product.Product_zipId); 
 
             if (existingItem != null)
             {
@@ -161,7 +161,7 @@ namespace TechShop_API_backend_.Data
                 //    Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, i => i.ProductId == item.ProductId)
                 //);
 
-                InsertCartItemQuantityAsync(userId, item.ProductId, existingItem.Quantity + item.Quantity);
+                InsertCartItemQuantityAsync(userId, item.Product.Product_zipId, existingItem.Quantity + item.Quantity);
                 //await _userDetail.UpdateOneAsync(arrayFilter, update);
                 return false;
             }
@@ -205,7 +205,7 @@ namespace TechShop_API_backend_.Data
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId)
             ).FirstOrDefaultAsync();
 
-            var item = user?.Cart?.FirstOrDefault(c => c.ProductId == productId);
+            var item = user?.Cart?.FirstOrDefault(c => c.Product.Product_zipId == productId);
             if (item == null) return null;
 
             int newQuantity = item.Quantity + changeAmount;
@@ -219,7 +219,7 @@ namespace TechShop_API_backend_.Data
             // Step 3: Proceed with update
             var filter = Builders<UserDetail>.Filter.And(
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId),
-                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.ProductId == productId)
+                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.Product.Product_zipId == productId)
             );
 
             var update = Builders<UserDetail>.Update.Inc("Cart.$.Quantity", changeAmount);
@@ -241,7 +241,7 @@ namespace TechShop_API_backend_.Data
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId)
             ).FirstOrDefaultAsync();
 
-            var item = user?.Cart?.FirstOrDefault(c => c.ProductId == productId);
+            var item = user?.Cart?.FirstOrDefault(c => c.Product.Product_zipId == productId);
             if (item == null) return null;
 
        
@@ -255,7 +255,7 @@ namespace TechShop_API_backend_.Data
             // Step 3: Proceed with update
             var filter = Builders<UserDetail>.Filter.And(
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId),
-                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.ProductId == productId)
+                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.Product.Product_zipId == productId)
             );
 
             var update = Builders<UserDetail>.Update.Set("Cart.$.Quantity", quantity);/*.Inc("Cart.$.Quantity", changeAmount);*/
@@ -275,7 +275,7 @@ namespace TechShop_API_backend_.Data
             var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
             var update = Builders<UserDetail>.Update.PullFilter(
                 u => u.Cart,
-                c => c.ProductId == productId
+                c => c.Product.Product_zipId == productId
             );
             await _userDetail.UpdateOneAsync(filter, update);
         }

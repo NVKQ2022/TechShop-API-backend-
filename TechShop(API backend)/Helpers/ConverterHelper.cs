@@ -69,10 +69,22 @@ namespace TechShop_API_backend_.Helpers
         {
             return new CartItem
             {
-                ProductId = product.ProductId,
-                ProductName = product.Name,
-                Image = product.ImageURL.FirstOrDefault(),  // Picking the first image URL from the list (or handle null list)
-                UnitPrice = product.Price,  // Converting int Price to decimal
+
+
+                Product= new Product_zip
+                {
+                    Product_zipId = product.ProductId,
+                    Name = product.Name,
+                    QuantitySold = product.Sold,
+                    Image = product.ImageURL?.FirstOrDefault(),
+                    Price = product.Price,
+                    Rating = product.Rating.Count == 0 ? 0 : (float)product.Rating.Sum(r =>
+                    {
+                        var starValue = int.Parse(r.Key.Replace("rate_", ""));
+                        return starValue * r.Value;
+                    }) / product.Rating.Values.Sum()
+                },
+                
                 Quantity = 1  // Defaulting to quantity of 1 (you can customize this)
             };
         }

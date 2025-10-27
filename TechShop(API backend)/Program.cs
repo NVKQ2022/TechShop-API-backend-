@@ -26,6 +26,7 @@ builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<VerificationCodeRepository>();
+builder.Services.AddScoped<AuthProviderRepository>();    
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<ImageService>();
 // Add service configurations

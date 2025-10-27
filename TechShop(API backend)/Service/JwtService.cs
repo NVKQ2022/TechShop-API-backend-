@@ -20,7 +20,7 @@ namespace TechShop_API_backend_.Service
         private byte[] key ;
         private string issuer;
         private string audience;
-        int expireMinutes;
+        public  int expireMinutes;
         
         public JwtService(IConfiguration configuration, UserRepository userRepository)
         {
@@ -63,6 +63,35 @@ namespace TechShop_API_backend_.Service
         }
 
 
+        public string GenerateToken(User user)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var tokenDescription = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            new Claim(ClaimTypes.Name, user.Username),
+            new Claim(ClaimTypes.Role, user.IsAdmin ? "Admin" : "User")
+        }),
+                Issuer = issuer,
+                Audience = audience,
+                NotBefore = DateTime.UtcNow,
+                Expires = DateTime.UtcNow.AddMinutes(expireMinutes), // calculate at runtime
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature
+                )
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescription);
+            return tokenHandler.WriteToken(token);
+        }
+
+
+
+
         //public string GenerateToken(User user)
         //{
         //    // Generate JWT token
@@ -97,35 +126,6 @@ namespace TechShop_API_backend_.Service
         //    var token = tokenHandler.CreateToken(tokenDescription);
         //    return tokenHandler.WriteToken(token);
         //}
-
-
-        public string GenerateToken(User user)
-        {
-            var tokenHandler = new JwtSecurityTokenHandler();
-
-            var tokenDescription = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.IsAdmin ? "Admin" : "User")
-        }),
-                Issuer = issuer,
-                Audience = audience,
-                NotBefore = DateTime.UtcNow,
-                Expires = DateTime.UtcNow.AddMinutes(expireMinutes), // calculate at runtime
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature
-                )
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescription);
-            return tokenHandler.WriteToken(token);
-        }
-
-
 
 
 

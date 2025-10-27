@@ -14,6 +14,10 @@ using MongoDB.Driver;
 using static System.Net.WebRequestMethods;
 using TechShop.API.Models;
 using TechShop.API.Repositories;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Google.Apis.Auth;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -24,14 +28,17 @@ namespace TechShop_API_backend_.Controllers
     [Authorize]
     public class AuthenticateController : ControllerBase
     {
+        private readonly IConfiguration _config;
         UserRepository _userRepository;
         VerificationCodeRepository _verificationCodeRepository;
         JwtService _jwtService;
         EmailService emailService;
         private readonly ILogger<AuthenticateController> _logger;
-
-        public AuthenticateController(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger)
+        private readonly AuthProviderRepository _authProviderRepository;
+        public AuthenticateController(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
         {
+            _config = config;
+            _authProviderRepository=authProviderRepository;
             _verificationCodeRepository = verificationCodeRepository;
             _userRepository = userRepository;
             _jwtService = jwtService;
@@ -59,6 +66,91 @@ namespace TechShop_API_backend_.Controllers
         //    }
         //    return result;
         //}
+
+
+
+
+
+
+
+
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleSignIn([FromBody] string idToken) //Not test yet
+        {
+            try
+            {
+                // 1️⃣ Verify Google ID Token
+                var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = new[] { _config["Authentication:Google:ClientId"] }
+                });
+
+                var googleId = payload.Subject;
+                var email = payload.Email;
+                var name = payload.Name ?? email.Split('@')[0];
+
+                // 2️⃣ Check if provider record already exists
+                var provider = await _authProviderRepository.GetByProviderAsync("google", googleId);
+                User? user = null;
+
+                if (provider == null)
+                {
+                    // 3️⃣ If provider not found, check if user already exists by email
+                    user = await _userRepository.GetUserByEmailAsync(email);
+
+                    // 4️⃣ If user doesn’t exist → create one
+                    if (user == null)
+                    {
+                        // Create new user
+                        var createResult = await _userRepository.CreateUserAsync(email, name, string.Empty, googleId, false);
+                        user = createResult.CreatedUser;
+                    }
+
+                    // 5️⃣ Create new auth provider link
+                    var newProvider = new AuthProvider
+                    {
+
+                        UserId = user.Id,
+                        Provider = "google",
+                        ProviderUserId = googleId,
+                        ProviderEmail = email,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _authProviderRepository.AddAsync(newProvider);
+                }
+                else
+                {
+                    // 6️⃣ If provider exists → fetch the associated user
+                    user = provider.User;
+
+                    if (user == null)
+                        return Unauthorized(new { message = "User record not found for this Google account." });
+                }
+
+                // 7️⃣ Generate JWT token
+                var token = _jwtService.GenerateToken(user);
+
+                // 8️⃣ Return consistent login response
+                return Ok(new
+                {
+                    userId = user.Id,
+                    username = user.Username,
+                    token,
+                    isAdmin = user.IsAdmin,
+                    expiresIn = _jwtService.expireMinutes * 60
+                });
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
+
+
+
+
 
 
 
@@ -136,7 +228,7 @@ namespace TechShop_API_backend_.Controllers
 
 
                 // 3. Create the user with hashed password
-                var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, false);
+                var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, string.Empty,false);
                 if (createdUser.ErrorMessage == "Email already exists")
                 {
                     _logger.LogWarning("Registration failed: Email {Email} is already in use.", newUser.Email);

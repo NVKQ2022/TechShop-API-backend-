@@ -28,10 +28,10 @@ namespace TechShop_API_backend_.Models.Authenticate
 
         [MaxLength(255)]
         [Column("provider_email")]
-        public string ProviderEmail { get; set; }
+        public string? ProviderEmail { get; set; }
 
         [Column("access_token")]
-        public string AccessToken { get; set; }
+        public string? AccessToken { get; set; }
 
         [Column("refresh_token")]
         public string RefreshToken { get; set; }

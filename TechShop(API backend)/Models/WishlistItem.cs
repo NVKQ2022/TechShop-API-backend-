@@ -1,9 +1,7 @@
 ﻿namespace TechShop_API_backend_.Models
 {
-    public class CartItem
+    public class WishlistItem
     {
         public Product_zip Product { get; set; }
-        public int Quantity { get; set; }
-
     }
 }

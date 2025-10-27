@@ -27,7 +27,7 @@ namespace TechShop_API_backend_.Data.Authenticate
 
 
         public async Task<(bool Success, string ErrorMessage, User? CreatedUser)> CreateUserAsync(
-    string email, string username, string password, bool isAdmin = false, bool isEmailVerified = false)
+    string email, string username, string password,string googleId, bool isAdmin = false, bool isEmailVerified = false)
         {
             // 1. Check duplicates (app-level validation for nice UX)
             if (await _context.Users.AnyAsync(u => u.Email == email))
@@ -47,6 +47,7 @@ namespace TechShop_API_backend_.Data.Authenticate
                 Email = email,
                 Username = username,
                 Password = hashedPassword,
+                GOOGLE_ID = googleId,
                 Salt = salt,
                 IsAdmin = isAdmin,
                 IsEmailVerified = isEmailVerified // For future email verification feature
