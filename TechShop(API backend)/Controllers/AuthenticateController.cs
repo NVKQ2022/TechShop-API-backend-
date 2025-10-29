@@ -35,6 +35,7 @@ namespace TechShop_API_backend_.Controllers
         EmailService emailService;
         private readonly ILogger<AuthenticateController> _logger;
         private readonly AuthProviderRepository _authProviderRepository;
+        private string _googleClientId =   Environment.GetEnvironmentVariable("GoogleOAuth__ClientId") ?? "";
         public AuthenticateController(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
         {
             _config = config;
@@ -71,18 +72,30 @@ namespace TechShop_API_backend_.Controllers
 
 
 
+        public class GoogleSignInRequest
+        {
+            public string IdToken { get; set; }
+        }
 
 
-
+        [AllowAnonymous]
         [HttpPost("google")]
-        public async Task<IActionResult> GoogleSignIn([FromBody] string idToken) //Not test yet
+        public async Task<IActionResult> GoogleSignIn([FromBody] GoogleSignInRequest request) //Not test yet
         {
             try
             {
+                if (request?.IdToken == null)
+                {
+                    return BadRequest(new { message = "idToken is required." });
+                }
+
+                // Log the request for debugging
+                Console.WriteLine($"Received idToken: {request.IdToken}");
+                var idToken = request.IdToken;
                 // 1️⃣ Verify Google ID Token
                 var payload = await GoogleJsonWebSignature.ValidateAsync(idToken, new GoogleJsonWebSignature.ValidationSettings
                 {
-                    Audience = new[] { _config["Authentication:Google:ClientId"] }
+                    Audience = new[] { _googleClientId }
                 });
 
                 var googleId = payload.Subject;
@@ -125,7 +138,7 @@ namespace TechShop_API_backend_.Controllers
                     user = provider.User;
 
                     if (user == null)
-                        return Unauthorized(new { message = "User record not found for this Google account." });
+                        return Unauthorized("User record not found for this Google account.");
                 }
 
                 // 7️⃣ Generate JWT token
@@ -143,11 +156,12 @@ namespace TechShop_API_backend_.Controllers
             }
             catch (Exception ex)
             {
-                return Unauthorized(new { message = ex.Message });
+                return
+                    Unauthorized(new { message = ex.Message });
             }
         }
 
-
+       
 
 
 
@@ -293,20 +307,15 @@ namespace TechShop_API_backend_.Controllers
             }
         }
 
-        [Authorize]
-        [HttpGet("Email/Opt")]
-        public async Task<IActionResult> EmailOPT()
+        [AllowAnonymous]
+        [HttpGet("Email/Opt/{email}")]
+        public async Task<IActionResult> EmailOPT(string email)
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                    return BadRequest("Invalid user ID.");
+                
 
-                if (!int.TryParse(userId, out int parsedUserId))
-                    return BadRequest("Invalid user ID format.");
-
-                var user = await _userRepository.GetUserByIdAsync(parsedUserId);
+                var user = await _userRepository.GetUserByEmailAsync(email);
                 if (user == null)
                     return BadRequest("User not found.");
 
@@ -381,8 +390,8 @@ namespace TechShop_API_backend_.Controllers
 
 
         [AllowAnonymous]
-        [HttpPost("testEmail/Opt/Verify/{otp}")]
-        public async Task<IActionResult> OPTVerify(string otp) //DONE
+        [HttpPost("testEmail/Opt/Verify")]
+        public async Task<IActionResult> OPTVerify([FromBody] string otp) //DONE
         {
             try
             {

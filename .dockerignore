@@ -1,4 +1,7 @@
 **/.classpath
+# Ignore Visual Studio launch settings
+**/Properties/launchSettings.json
+
 **/.dockerignore
 **/.env
 **/.git
