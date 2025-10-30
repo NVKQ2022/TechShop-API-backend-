@@ -68,7 +68,7 @@ namespace TechShop_API_backend_.Controllers
         // GET: api/<ProductController>
         [AllowAnonymous]  // Allows anonymous users to access this endpoint
         [HttpGet("Fetch/{category}/{number}")]
-        public async Task<IActionResult> GetListProductsƯithCategory(int number, string category)
+        public async Task<IActionResult> GetListProductsWithCategory(int number, string category)
         {
             
 
@@ -84,7 +84,13 @@ namespace TechShop_API_backend_.Controllers
         }
 
 
-
+        [AllowAnonymous]
+        [HttpGet("All/Category")]
+        public async Task<IActionResult> GetAllCategories()
+        {
+            var categories = await productRepository.GetAllCategoriesAsync();
+            return Ok(categories);
+        }
 
 
         [AllowAnonymous]

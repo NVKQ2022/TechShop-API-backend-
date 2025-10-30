@@ -7,7 +7,7 @@ using TechShop_API_backend_.Models;
 
 namespace TechShop_API_backend_.Data
 {
-    public class OrderRepository:IOrderRepository
+    public class OrderRepository
     {
         private readonly IMongoCollection<Order> _orders;
 
@@ -17,6 +17,13 @@ namespace TechShop_API_backend_.Data
             var database = client.GetDatabase(settings.Value.DatabaseName);
             _orders = database.GetCollection<Order>(settings.Value.OrderCollectionName);
         }
+
+
+        public async Task<List<Order>> GetAllOrdersAsync()
+        {
+            return await _orders.Find(_ => true).ToListAsync();
+        }
+
 
         public async Task CreateOrderAsync(Order order)
         {
@@ -64,32 +71,20 @@ namespace TechShop_API_backend_.Data
 
 
 
-        public async Task<bool> UpdateOrderAsync(string orderId, UpdateOrderRequest request)
+        public async Task<bool> UpdateOrderAsync( Order updatedOrder)
         {
-            var order = await _orders.Find(o => o.OrderID == orderId).FirstOrDefaultAsync();
+            var filter = Builders<Order>.Filter.Eq(o => o.OrderID, updatedOrder.OrderID);
+            var update = Builders<Order>.Update
+                .Set(o => o.Items, updatedOrder.Items)
+                .Set(o => o.TotalAmount, updatedOrder.TotalAmount)
+                .Set(o => o.PaymentMethod, updatedOrder.PaymentMethod)
+                .Set(o => o.ReceiveInfo, updatedOrder.ReceiveInfo)
+                .Set(o => o.Status, updatedOrder.Status);
 
-            if (order == null)
-                return false;
-
-            // Update item quantities
-            foreach (var updateItem in request.Items)
-            {
-                var existingItem = order.Items.FirstOrDefault(i => i.ProductID == updateItem.ProductID);
-                if (existingItem != null)
-                {
-                    existingItem.Quantity = updateItem.Quantity;
-                }
-            }
-
-            // Update receive info
-            if (request.ReceiveInfo != null)
-            {
-                order.ReceiveInfo = request.ReceiveInfo;
-            }
-
-            var result = await _orders.ReplaceOneAsync(o => o.OrderID == orderId, order);
+            var result = await _orders.UpdateOneAsync(filter, update);
             return result.ModifiedCount > 0;
         }
+
 
         public async Task<bool> UpdateOrderStatusAsync(string orderId, string newStatus)
         {
@@ -99,9 +94,11 @@ namespace TechShop_API_backend_.Data
             return result.ModifiedCount > 0;
         }
 
-        public async Task DeleteOrderAsync(string id)
+        public async Task<bool> DeleteOrderAsync(string id)
         {
-            await _orders.DeleteOneAsync(o => o.OrderID == id);
+            var result = await _orders.DeleteOneAsync(o => o.OrderID == id);
+            return result.IsAcknowledged && result.DeletedCount > 0;
         }
+
     }
 }

@@ -355,36 +355,8 @@ namespace TechShop_API_backend_.Controllers
 
 
 
-        [AllowAnonymous]
-        [HttpPost("test")]
-        public async Task<IActionResult> TestOTP() //DONE
-        {
-            try
-            {
-                var verificationCode = new VerificationCode
-                {
-                    UserId = 10096,
-                    Email = "123124",
-                    Code = "12314",
-                    Type = "EMAIL_VERIFY",
-                    ExpiresAt = DateTime.Now.AddMinutes(10),
-                    IsUsed = false,
-                    CreatedAt = DateTime.Now
-                };
-
-                await _verificationCodeRepository.CreateAsync(verificationCode);
-                return Ok("OTP code has been sent.");
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    Message = "An error occurred while processing your request.",
-                    Error = ex.Message,
-                    Inner = ex.InnerException?.Message
-                });
-            }
-        }
+        
+       
 
 
 

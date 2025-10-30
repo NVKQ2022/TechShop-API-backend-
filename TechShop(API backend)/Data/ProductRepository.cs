@@ -18,6 +18,27 @@ public class ProductRepository:IProductRepository
         _products = database.GetCollection<Product>(settings.Value.ProductCollectionName);
     }
 
+    public async Task AddRandomStockToAllProductsAsync()
+    {
+        var random = new Random();
+
+        // Get all products
+        var products = await _products.Find(_ => true).ToListAsync();
+
+        foreach (var product in products)
+        {
+            // Generate a random stock, e.g., between 10 and 100
+            product.Stock = random.Next(10, 101);
+
+            // Update the product in MongoDB
+            var filter = Builders<Product>.Filter.Eq(p => p.ProductId, product.ProductId);
+            var update = Builders<Product>.Update.Set(p => p.Stock, product.Stock);
+
+            await _products.UpdateOneAsync(filter, update);
+        }
+    }
+
+
     public async Task<List<Product>> GetSuggestions(string query)
     {
         if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
@@ -75,7 +96,17 @@ public class ProductRepository:IProductRepository
     }
 
 
+    public async Task<List<Product>> GetByIdsAsync(List<string> productIds)
+    {
+        if (productIds == null || productIds.Count == 0)
+            return new List<Product>();
 
+        // Filter for all products whose ProductId is in the list
+        var filter = Builders<Product>.Filter.In(p => p.ProductId, productIds);
+
+        var products = await _products.Find(filter).ToListAsync();
+        return products;
+    }
 
 
     public async Task<string?> GetCategoryByProductIdAsync(string productId)
@@ -144,24 +175,42 @@ public class ProductRepository:IProductRepository
 
 
 
-    public async Task DecreaseProductStockAsync(string productId, int amount)
+    public async Task<bool> DecreaseProductStockAsync(string productId, int amount)
+    {
+        if (amount <= 0)
+            throw new ArgumentException("Amount must be greater than 0.");
+
+        var filter = Builders<Product>.Filter.And(
+            Builders<Product>.Filter.Eq(p => p.ProductId, productId),
+            Builders<Product>.Filter.Gte(p => p.Stock, amount) // ensure enough stock
+        );
+
+        var update = Builders<Product>.Update.Combine(
+            Builders<Product>.Update.Inc(p => p.Stock, -amount),
+            Builders<Product>.Update.Inc(p => p.Sold, amount) // optional: track sold quantity
+        );
+
+        var result = await _products.UpdateOneAsync(filter, update);
+
+        return result.ModifiedCount > 0; // true if stock was decreased successfully
+    }
+
+
+    public async Task<bool> IncreaseProductStockAsync(string productId, int amount)
     {
         if (amount <= 0)
             throw new ArgumentException("Amount must be greater than 0.");
 
         var filter = Builders<Product>.Filter.Eq(p => p.ProductId, productId);
 
-        // Use $set with $subtract to decrease the current Kho value
-        var update = Builders<Product>.Update.Combine(
-            Builders<Product>.Update.Inc("Sold", amount), // Optional: track sold quantity
-            Builders<Product>.Update.Set("Detail.Kho",
-                new BsonDocument("$subtract", new BsonArray { "$Detail.Kho", amount }))
-        );
+        var update = Builders<Product>.Update.Inc(p => p.Stock, amount);
 
-        var options = new UpdateOptions { IsUpsert = false };
+        var result = await _products.UpdateOneAsync(filter, update);
 
-        await _products.UpdateOneAsync(filter, update, options);
+        return result.ModifiedCount > 0; // true if stock was increased successfully
     }
+
+
 
     public async Task ConvertKhoToStringAsync()
     {

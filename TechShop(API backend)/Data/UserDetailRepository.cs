@@ -5,7 +5,7 @@ using TechShop_API_backend_.Models;
 namespace TechShop_API_backend_.Data
 {
 
-    public class UserDetailRepository : IUserDetailRepository
+    public class UserDetailRepository 
     {
         private readonly IMongoCollection<UserDetail> _userDetail;
 
@@ -17,20 +17,28 @@ namespace TechShop_API_backend_.Data
             _userDetail = database.GetCollection<UserDetail>(settings.Value.UserDetailCollectionName);
         }
 
+
+
+        public async Task EnsureWishlistFieldExists()
+        {
+            var filter = Builders<UserDetail>.Filter.Exists(u => u.Wishlist, false);
+            var update = Builders<UserDetail>.Update.Set(u => u.Wishlist, new List<WishlistItem>());
+            await _userDetail.UpdateManyAsync(filter, update);
+        }
+
+
+
+
         public async Task<bool> DeleteUserDetailAsync(int userId)
         {
             var result = await _userDetail.DeleteOneAsync(u => u.UserId == userId);
             return result.DeletedCount > 0;
         }
-        public async Task<bool> UpdateUserDetailAsync(int userId, UserDetail updatedUserDetail) // set to null if dont update
+        public async Task<bool> UpdateUserDetailAsync(int userId, UserDetail updatedUserDetail)
         {
-            // Define the filter to find the document by UserId
             var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
-
-            // Create a list of update definitions (we will apply them conditionally)
             var updateDefinitions = new List<UpdateDefinition<UserDetail>>();
 
-            // Conditionally add update operations if the fields are not null
             if (!string.IsNullOrEmpty(updatedUserDetail.Name))
                 updateDefinitions.Add(Builders<UserDetail>.Update.Set(u => u.Name, updatedUserDetail.Name));
 
@@ -52,23 +60,21 @@ namespace TechShop_API_backend_.Data
             if (updatedUserDetail.Cart != null)
                 updateDefinitions.Add(Builders<UserDetail>.Update.Set(u => u.Cart, updatedUserDetail.Cart));
 
+            if (updatedUserDetail.Wishlist != null)
+                updateDefinitions.Add(Builders<UserDetail>.Update.Set(u => u.Wishlist, updatedUserDetail.Wishlist));
+
             if (updatedUserDetail.ReceiveInfo != null)
                 updateDefinitions.Add(Builders<UserDetail>.Update.Set(u => u.ReceiveInfo, updatedUserDetail.ReceiveInfo));
 
             if (updatedUserDetail.Banking != null)
                 updateDefinitions.Add(Builders<UserDetail>.Update.Set(u => u.Banking, updatedUserDetail.Banking));
 
-            // If no fields were provided to update, return false
             if (updateDefinitions.Count == 0)
                 return false;
 
-            // Combine all update definitions into one
             var update = Builders<UserDetail>.Update.Combine(updateDefinitions);
-
-            // Perform the update
             var result = await _userDetail.UpdateOneAsync(filter, update);
 
-            // Return whether the document was updated (ModifiedCount > 0 means a document was found and modified)
             return result.ModifiedCount > 0;
         }
 
@@ -147,7 +153,7 @@ namespace TechShop_API_backend_.Data
                 throw new Exception("User not found.");
             }
 
-            var existingItem = user.Cart.FirstOrDefault(i => i.Product.Product_zipId == item.Product.Product_zipId); 
+            var existingItem = user.Cart.FirstOrDefault(i => i.ProductId == item.ProductId); 
 
             if (existingItem != null)
             {
@@ -161,7 +167,7 @@ namespace TechShop_API_backend_.Data
                 //    Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, i => i.ProductId == item.ProductId)
                 //);
 
-                InsertCartItemQuantityAsync(userId, item.Product.Product_zipId, existingItem.Quantity + item.Quantity);
+                InsertCartItemQuantityAsync(userId, item.ProductId, existingItem.Quantity + item.Quantity);
                 //await _userDetail.UpdateOneAsync(arrayFilter, update);
                 return false;
             }
@@ -198,6 +204,86 @@ namespace TechShop_API_backend_.Data
 
         //    return null; // not updated
         //}
+
+
+        public async Task<bool> AddWishlistItemAsync(int userId, WishlistItem item)
+        {
+            // Prevent duplicate products in the wishlist
+            var filter = Builders<UserDetail>.Filter.And(
+                Builders<UserDetail>.Filter.Eq(u => u.UserId, userId),
+                Builders<UserDetail>.Filter.Not(
+                    Builders<UserDetail>.Filter.ElemMatch(u => u.Wishlist, w => w.ProductId == item.ProductId)
+                )
+            );
+
+            var update = Builders<UserDetail>.Update.Push(u => u.Wishlist, item);
+            var result = await _userDetail.UpdateOneAsync(filter, update);
+
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> RemoveWishlistItemAsync(int userId, string productId)
+        {
+            var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
+            var update = Builders<UserDetail>.Update.PullFilter(u => u.Wishlist, w => w.ProductId == productId);
+            var result = await _userDetail.UpdateOneAsync(filter, update);
+
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> MoveWishlistItemToCartAsync(int userId, string productId)
+        {
+            // 1️⃣ Find user
+            var user = await _userDetail.Find(u => u.UserId == userId).FirstOrDefaultAsync();
+            if (user == null || user.Wishlist == null)
+                return false;
+
+            // 2️⃣ Find the wishlist item
+            var wishlistItem = user.Wishlist.FirstOrDefault(w => w.ProductId == productId);
+            if (wishlistItem == null)
+                return false;
+
+            // 3️⃣ Remove the item from wishlist
+            var removeResult = await RemoveWishlistItemAsync(userId, productId);
+
+            // 4️⃣ Check if item already exists in cart
+            var existingCartItem = user.Cart?.FirstOrDefault(c => c.ProductId == productId);
+            if (existingCartItem != null)
+            {
+                // If exists, just increment quantity by 1
+                var filterUpdate = Builders<UserDetail>.Filter.And(
+                    Builders<UserDetail>.Filter.Eq(u => u.UserId, userId),
+                    Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.ProductId == productId)
+                );
+
+                var updateQty = Builders<UserDetail>.Update.Inc("Cart.$.Quantity", 1);
+                var updateResult = await _userDetail.UpdateOneAsync(filterUpdate, updateQty);
+                return updateResult.ModifiedCount > 0;
+            }
+            else
+            {
+                // If not exists, add as a new cart item
+                var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
+                var newCartItem = new CartItem
+                {
+                    ProductId = wishlistItem.ProductId,
+                    ProductName = wishlistItem.ProductName,
+                    Image = wishlistItem.Image,
+                    Quantity = 1, // default quantity
+                    UnitPrice = wishlistItem.UnitPrice
+                };
+
+                var update = Builders<UserDetail>.Update.Push(u => u.Cart, newCartItem);
+                var addResult = await _userDetail.UpdateOneAsync(filter, update);
+                return removeResult && addResult.ModifiedCount > 0;
+            }
+        }
+
+
+
+
+
+
         public async Task<int?> UpdateCartItemQuantityAsync(int userId, string productId, int changeAmount)
         {
             // Step 1: Get current quantity
@@ -205,7 +291,7 @@ namespace TechShop_API_backend_.Data
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId)
             ).FirstOrDefaultAsync();
 
-            var item = user?.Cart?.FirstOrDefault(c => c.Product.Product_zipId == productId);
+            var item = user?.Cart?.FirstOrDefault(c => c.ProductId == productId);
             if (item == null) return null;
 
             int newQuantity = item.Quantity + changeAmount;
@@ -219,7 +305,7 @@ namespace TechShop_API_backend_.Data
             // Step 3: Proceed with update
             var filter = Builders<UserDetail>.Filter.And(
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId),
-                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.Product.Product_zipId == productId)
+                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.ProductId == productId)
             );
 
             var update = Builders<UserDetail>.Update.Inc("Cart.$.Quantity", changeAmount);
@@ -241,7 +327,7 @@ namespace TechShop_API_backend_.Data
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId)
             ).FirstOrDefaultAsync();
 
-            var item = user?.Cart?.FirstOrDefault(c => c.Product.Product_zipId == productId);
+            var item = user?.Cart?.FirstOrDefault(c => c.ProductId == productId);
             if (item == null) return null;
 
        
@@ -255,7 +341,7 @@ namespace TechShop_API_backend_.Data
             // Step 3: Proceed with update
             var filter = Builders<UserDetail>.Filter.And(
                 Builders<UserDetail>.Filter.Eq(u => u.UserId, userId),
-                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.Product.Product_zipId == productId)
+                Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.ProductId == productId)
             );
 
             var update = Builders<UserDetail>.Update.Set("Cart.$.Quantity", quantity);/*.Inc("Cart.$.Quantity", changeAmount);*/
@@ -275,7 +361,7 @@ namespace TechShop_API_backend_.Data
             var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
             var update = Builders<UserDetail>.Update.PullFilter(
                 u => u.Cart,
-                c => c.Product.Product_zipId == productId
+                c => c.ProductId == productId
             );
             await _userDetail.UpdateOneAsync(filter, update);
         }

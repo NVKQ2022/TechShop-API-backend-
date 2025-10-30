@@ -18,5 +18,6 @@ namespace TechShop_API_backend_.Models
         public Dictionary<string, string> Detail { get; set; }
         public string Category { get; set; }
         public int Sold { get; set; }
+        public int Stock { get; set; }
     }
 }

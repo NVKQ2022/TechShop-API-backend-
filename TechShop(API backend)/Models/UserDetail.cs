@@ -21,6 +21,7 @@ namespace TechShop_API_backend_.Models
         // e.g., { "Laptop": 2, "Keyboard": 1 }
         public Dictionary<string, int> Category { get; set; }
         public List<CartItem> Cart { get; set; }
+        public List<WishlistItem> Wishlist { get; set; }
         public List<ReceiveInfo> ReceiveInfo { get; set; }
 
       

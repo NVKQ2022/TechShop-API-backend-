@@ -71,21 +71,31 @@ namespace TechShop_API_backend_.Helpers
             {
 
 
-                Product= new Product_zip
-                {
-                    Product_zipId = product.ProductId,
-                    Name = product.Name,
-                    QuantitySold = product.Sold,
-                    Image = product.ImageURL?.FirstOrDefault(),
-                    Price = product.Price,
-                    Rating = product.Rating.Count == 0 ? 0 : (float)product.Rating.Sum(r =>
-                    {
-                        var starValue = int.Parse(r.Key.Replace("rate_", ""));
-                        return starValue * r.Value;
-                    }) / product.Rating.Values.Sum()
-                },
-                
+                ProductId = product.ProductId,
+                Image = product.ImageURL?.FirstOrDefault(),
+                ProductName = product.Name,
+                UnitPrice = product.Price,
+
+
                 Quantity = 1  // Defaulting to quantity of 1 (you can customize this)
+            };
+        }
+
+
+        public OrderItem ConvertProductToOrderItem(Product product, int quantity = 1)
+        {
+            if (product == null)
+                throw new ArgumentNullException(nameof(product));
+
+            return new OrderItem
+            {
+                ProductID = product.ProductId,
+                ProductName = product.Name,
+                Image = product.ImageURL != null && product.ImageURL.Count > 0
+                        ? product.ImageURL[0]
+                        : string.Empty,
+                Quantity = quantity,
+                UnitPrice = product.Price
             };
         }
 
