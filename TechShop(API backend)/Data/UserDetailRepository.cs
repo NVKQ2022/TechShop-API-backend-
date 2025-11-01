@@ -180,30 +180,7 @@ namespace TechShop_API_backend_.Data
             }
         }
 
-        //public async Task<int?> UpdateCartItemQuantityAsync(int userId, string productId, int changeAmount)
-        //{
-        //    var filter = Builders<UserDetail>.Filter.And(
-        //        Builders<UserDetail>.Filter.Eq(u => u.UserId, userId),
-        //        Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, c => c.ProductId == productId)
-        //    );
-
-        //    var update = Builders<UserDetail>.Update.Inc("Cart.$.Quantity", changeAmount);
-
-        //    var result = await _userDetail.UpdateOneAsync(filter, update);
-
-        //    if (result.ModifiedCount > 0)
-        //    {
-        //        // Fetch the updated quantity
-        //        var updatedUser = await _userDetail.Find(
-        //            Builders<UserDetail>.Filter.Eq(u => u.UserId, userId)
-        //        ).FirstOrDefaultAsync();
-
-        //        var item = updatedUser?.Cart?.FirstOrDefault(c => c.ProductId == productId);
-        //        return item?.Quantity;
-        //    }
-
-        //    return null; // not updated
-        //}
+       
 
 
         public async Task<bool> AddWishlistItemAsync(int userId, WishlistItem item)

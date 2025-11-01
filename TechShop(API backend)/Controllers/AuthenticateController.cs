@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TechShop_API_backend_.Models;
+using TechShop_API_backend_.DTOs.Auth;
 using System.ComponentModel;
 using Microsoft.AspNetCore.Identity.Data;
 using TechShop_API_backend_.Service;
@@ -278,34 +279,90 @@ namespace TechShop_API_backend_.Controllers
 
 
 
-
-
-
-
-
-
-
-        [AllowAnonymous]
-        [HttpPost("test/EmailVerify/{targetEmail}")]
-        public async Task<IActionResult> EmailVerify(string targetEmail="23521267@gm.uit.edu.vn") //DONE
+        [Authorize]
+        [HttpPut("changePassword/Authenticated")]
+        public async Task
+            <IActionResult> ChangePasswordAuthenticated([FromBody] ChangePasswordDto changePasswordDto) //DONE
         {
-           
-
             try
             {
-
-                // verified email 
-
-               
-                EmailService.SendVerificationEmail(targetEmail, "1234567890");
-
-                return Ok();
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var user = await _userRepository.GetUserByIdAsync(int.Parse(userId!));
+                if (user == null)
+                    return BadRequest("User not found.");
+                // Verify current password
+                if (!SecurityHelper.VerifyPassword(changePasswordDto.CurrentPassword, user.Salt, user.Password))
+                {
+                    return BadRequest("Current password is incorrect.");
+                }
+                var result = SecurityHelper.CheckPasswordStrength(changePasswordDto.NewPassword);
+                if (result.IsStrong == false)
+                {
+                    return BadRequest($"The password  is not strong enough");
+                }
+                // Update password
+                var salt = SecurityHelper.GenerateSalt();
+                var hashedPassword = SecurityHelper.HashPassword(changePasswordDto.NewPassword, salt);
+                user.Password = hashedPassword;
+                user.Salt = salt;
+                bool updateResult = await _userRepository.UpdateUserAsync(user);
+                if (!updateResult)
+                {
+                    return StatusCode(500, "Failed to update password.");
+                }
+                return Ok("Password changed successfully.");
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
             }
         }
+
+
+
+
+
+        [AllowAnonymous]
+        [HttpPut("changePassword/Forgot")]
+        public async Task<IActionResult> ChangePasswordOnForgot([FromBody] ChangePasswordDto changePasswordDto) //DONE
+        {
+            try
+            {
+                var user = await _userRepository.GetUserByEmailAsync(changePasswordDto.Email);
+                if (user == null)
+                    return BadRequest("User not found.");
+                var isMatched = await _verificationCodeRepository.VerifyAsync(user.Id, "EMAIL_VERIFY", changePasswordDto.OTP);
+                if (!isMatched)
+                {
+                    return BadRequest("Invalid or expired OTP code.");
+                }
+                var result = SecurityHelper.CheckPasswordStrength(changePasswordDto.NewPassword);
+                if (result.IsStrong == false)
+                {
+                    return BadRequest($"The password  is not strong enough");
+                }
+                // Update password
+                var salt = SecurityHelper.GenerateSalt();
+                var hashedPassword = SecurityHelper.HashPassword(changePasswordDto.NewPassword, salt);
+                user.Password = hashedPassword;
+                user.Salt = salt;
+                bool updateResult = await _userRepository.UpdateUserAsync(user);
+                if (!updateResult)
+                {
+                    return StatusCode(500, "Failed to update password.");
+                }
+                return Ok("Password changed successfully.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
+            }
+        }   
+
+
+
+        
+
 
         [AllowAnonymous]
         [HttpGet("Email/Opt/{email}")]

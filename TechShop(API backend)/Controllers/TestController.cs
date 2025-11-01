@@ -86,7 +86,6 @@ namespace TechShop_API_backend_.Controllers
 
         [AllowAnonymous]
         [HttpPost("AddRandomStockForAllProduct")]
-
         public async Task<IActionResult> AddRandomStock() //DONE
         {
             try
@@ -105,5 +104,32 @@ namespace TechShop_API_backend_.Controllers
                 });
             }
         }
+
+
+
+        [AllowAnonymous]
+        [HttpPost("EmailVerify/{targetEmail}")]
+        public async Task<IActionResult> EmailVerify(string targetEmail = "23521267@gm.uit.edu.vn") //DONE
+        {
+
+
+            try
+            {
+
+                // verified email 
+
+
+                EmailService.SendVerificationEmail(targetEmail, "1234567890");
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
+            }
+        }
+
+
+
     }
 }
