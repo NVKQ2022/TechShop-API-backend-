@@ -19,5 +19,16 @@ namespace TechShop_API_backend_.Models
         public string Category { get; set; }
         public int Sold { get; set; }
         public int Stock { get; set; }
+
+        public SaleInfo Sale { get; set; }
     }
+    public class SaleInfo
+    {
+        public double Percent { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+
 }

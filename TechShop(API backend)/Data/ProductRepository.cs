@@ -7,7 +7,7 @@ using MongoDB.Bson;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
-public class ProductRepository:IProductRepository
+public class ProductRepository
 {
     private readonly IMongoCollection<Product> _products;
 
@@ -17,6 +17,107 @@ public class ProductRepository:IProductRepository
         var database = client.GetDatabase(settings.Value.DatabaseName);
         _products = database.GetCollection<Product>(settings.Value.ProductCollectionName);
     }
+
+
+
+
+    // Ensure all Product have sale Info
+    public async Task EnsureAllProductsHaveSaleInfoAsync()
+    {
+        var filter = Builders<Product>.Filter.Eq(p => p.Sale, null);
+        var productsWithoutSale = await _products.Find(filter).ToListAsync();
+
+        if (productsWithoutSale.Count == 0)
+        {
+            Console.WriteLine("✅ All products already have SaleInfo.");
+            return;
+        }
+
+        var defaultSale = new SaleInfo
+        {
+            Percent = 0.0,
+            StartDate = DateTime.UtcNow,
+            EndDate = DateTime.UtcNow,
+            IsActive = false
+        };
+
+        foreach (var product in productsWithoutSale)
+        {
+            var update = Builders<Product>.Update.Set(p => p.Sale, defaultSale);
+            await _products.UpdateOneAsync(p => p.ProductId == product.ProductId, update);
+        }
+
+        Console.WriteLine($"✅ Added default SaleInfo to {productsWithoutSale.Count} products.");
+    }
+
+
+
+
+
+
+    public async Task ApplyRandomSalesAsync(int numberOfProducts = 5)
+    {
+        // 1️⃣ Get all products
+        var products = await _products.Find(_ => true).ToListAsync();
+        if (products.Count == 0)
+        {
+            Console.WriteLine("⚠️ No products found in the database.");
+            return;
+        }
+
+        // 2️⃣ Randomly choose N unique products
+        var random = new Random();
+        var selectedProducts = products.OrderBy(x => random.Next()).Take(numberOfProducts).ToList();
+
+        // 3️⃣ Apply random sales
+        foreach (var product in selectedProducts)
+        {
+            var percent = Math.Round(random.NextDouble() * 0.4 + 0.1, 2); // between 10%–50%
+            var days = random.Next(3, 8); // sale lasts 3–7 days
+
+            var saleInfo = new SaleInfo
+            {
+                Percent = percent,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddDays(days),
+                IsActive = true
+            };
+
+            var update = Builders<Product>.Update.Set(p => p.Sale, saleInfo);
+            await _products.UpdateOneAsync(p => p.ProductId == product.ProductId, update);
+
+            Console.WriteLine($"🎉 {product.Name} now has {percent * 100}% off for {days} days!");
+        }
+
+        Console.WriteLine($"✅ Applied random sales to {selectedProducts.Count} products.");
+    }
+
+
+
+
+
+    //  Get products currently on sale
+    public async Task<List<Product>> GetActiveSalesAsync()
+    {
+        var now = DateTime.UtcNow;
+        var filter = Builders<Product>.Filter.Where(p =>
+            p.Sale != null &&
+            p.Sale.IsActive &&
+            p.Sale.StartDate <= now &&
+            p.Sale.EndDate >= now);
+
+        var products = await _products.Find(filter).ToListAsync();
+        return products;
+    }
+
+
+    public async Task UpdateSaleAsync(string productId, SaleInfo saleInfo)
+    {
+        var update = Builders<Product>.Update.Set(p => p.Sale, saleInfo);
+        await _products.UpdateOneAsync(p => p.ProductId == productId, update);
+    }
+
+
 
     public async Task AddRandomStockToAllProductsAsync()
     {

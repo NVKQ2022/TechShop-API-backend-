@@ -106,6 +106,23 @@ namespace TechShop_API_backend_.Controllers
         }
 
 
+        [AllowAnonymous]
+        [HttpPost("ensureHaveSaleInfo")]
+        public async Task<IActionResult> EnsureSaleInfo()
+        {
+            await _productRepository.EnsureAllProductsHaveSaleInfoAsync();
+            return Ok();
+        }
+        
+
+        [AllowAnonymous]
+        [HttpPost("RandomSale/{number}")]
+
+        public async Task<IActionResult> RandomSale(int number)
+        {
+            await _productRepository.ApplyRandomSalesAsync(number);
+            return Ok();
+        }
 
         [AllowAnonymous]
         [HttpPost("EmailVerify/{targetEmail}")]

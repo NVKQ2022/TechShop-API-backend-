@@ -19,6 +19,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Google.Apis.Auth;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
+using FirebaseAdmin.Auth;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -29,6 +32,10 @@ namespace TechShop_API_backend_.Controllers
     [Authorize]
     public class AuthenticateController : ControllerBase
     {
+
+
+
+
         private readonly IConfiguration _config;
         UserRepository _userRepository;
         VerificationCodeRepository _verificationCodeRepository;
@@ -39,6 +46,15 @@ namespace TechShop_API_backend_.Controllers
         private string _googleClientId =   Environment.GetEnvironmentVariable("GoogleOAuth__ClientId") ?? "";
         public AuthenticateController(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
         {
+
+            //FirebaseApp.Create(new AppOptions()
+            //{
+            //    Credential = GoogleCredential.FromFile("firebase-adminsdk.json")
+            //});
+
+            //need to test firebase admin sdk
+
+
             _config = config;
             _authProviderRepository=authProviderRepository;
             _verificationCodeRepository = verificationCodeRepository;
@@ -73,15 +89,90 @@ namespace TechShop_API_backend_.Controllers
 
 
 
-        public class GoogleSignInRequest
+        public class SignInTokenRequest
         {
             public string IdToken { get; set; }
         }
 
 
+
+
+        [AllowAnonymous]
+        [HttpPost("firebase")]
+        public async Task<IActionResult> FirebaseSignIn([FromBody] SignInTokenRequest request) // not test yet
+        {
+            try
+            {
+                var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
+
+                string uid= string.Empty;
+                string email= string.Empty;
+                string provider= string.Empty;
+                if (decodedToken.Claims != null && decodedToken.Claims.TryGetValue("firebase", out var firebaseObj))
+                {
+                    // firebaseObj is usually a Dictionary<string, object>
+                    if (firebaseObj is IDictionary<string, object> firebaseDict &&
+                        firebaseDict.TryGetValue("sign_in_provider", out var signInProviderObj) &&
+                        signInProviderObj != null)
+                    {
+                        uid = decodedToken.Uid;
+                        email = decodedToken.Claims.ContainsKey("email") ? decodedToken.Claims["email"].ToString() : null;
+                        provider = signInProviderObj.ToString(); // e.g. "google.com", "facebook.com", "apple.com"
+                    }
+                  
+                }
+                
+
+                // Find or create user in your DB
+                var user = await _userRepository.GetUserByEmailAsync(email);
+                if (user == null)
+                {
+                    var createResult = await _userRepository.CreateUserAsync(email, email.Split('@')[0], "", uid, false);
+                    if (!createResult.Success && createResult.ErrorMessage != null)
+                    {
+                        return BadRequest(new { message = createResult.ErrorMessage });
+                    }
+                    user = createResult.CreatedUser;
+                }
+
+                var token = _jwtService.GenerateToken(user);
+
+                return Ok(new
+                {
+                    userId = user.Id,
+                    username = user.Username,
+                    token,
+                    isAdmin = user.IsAdmin,
+                    expiresIn = _jwtService.expireMinutes * 60
+                });
+            }
+            catch (Exception ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         [AllowAnonymous]
         [HttpPost("google")]
-        public async Task<IActionResult> GoogleSignIn([FromBody] GoogleSignInRequest request) //Not test yet
+        public async Task<IActionResult> GoogleSignIn([FromBody] SignInTokenRequest request) // done
         {
             try
             {
@@ -104,7 +195,7 @@ namespace TechShop_API_backend_.Controllers
                 var name = payload.Name ?? email.Split('@')[0];
 
                 // 2️⃣ Check if provider record already exists
-                var provider = await _authProviderRepository.GetByProviderAsync("google", googleId);
+                var provider = await _authProviderRepository.GetByProviderAsync("google.com", googleId);
                 User? user = null;
 
                 if (provider == null)

@@ -41,7 +41,7 @@ namespace TechShop_API_backend_.Helpers
                 Price = product.Price,
 
 
-
+                Sale = product.Sale,
 
 
                 Rating = (float)roundedAverage

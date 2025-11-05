@@ -57,7 +57,7 @@ namespace TechShop_API_backend_.Service
                 IsAdmin = user.IsAdmin , 
                 UserId = user.Id, 
                 Username = user.Username, 
-                ExpiresIn =  expireMinutes*60
+                ExpiresIn =  expireMinutes*60 // for testing purpose only
                 /*(int)DateTime.UtcNow.AddMinutes(expireMinutes).Subtract(DateTime.UtcNow).TotalSeconds*/
             };
         }
