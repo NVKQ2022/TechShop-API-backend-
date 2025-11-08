@@ -33,6 +33,18 @@ namespace TechShop_API_backend_.Controllers
             return Ok(user.Wishlist ?? new List<WishlistItem>());
         }
 
+
+
+        [Authorize]
+        [HttpGet("check")]
+        public async Task<IActionResult> CheckIsAdded(string productId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var success = await _userDetailRepository.IsProductInWishlistAsync(int.Parse(userId), productId);
+            
+
+            return Ok(success);
+        }
         /// <summary>
         /// Add a new item to the user's wishlist.
         /// </summary>

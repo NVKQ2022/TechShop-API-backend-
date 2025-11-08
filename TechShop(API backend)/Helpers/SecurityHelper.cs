@@ -62,10 +62,10 @@ namespace TechShop_API_backend_.Helpers
             }
         }
 
-        public static bool VerifyPassword(string inputPassword, string storedSalt, string storedHash) // use when login
+        public static bool VerifyPassword(string inputPassword, string storedSalt, string passwordHash) // use when login
         {
             string newHash = HashPassword(inputPassword, storedSalt);
-            return storedHash == newHash;
+            return passwordHash == newHash;
         }
         public static (bool IsStrong, string Rating) CheckPasswordStrength(string password)
         {

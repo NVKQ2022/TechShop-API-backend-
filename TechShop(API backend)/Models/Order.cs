@@ -19,13 +19,13 @@ namespace TechShop_API_backend_.Models
 
         public int TotalAmount { get; set; }
 
-        public string PaymentMethod { get; set; }
+        public string? PaymentMethod { get; set; }
 
         public string Status { get; set; }
 
         [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
         public DateTime CreatedAt { get; set; }
-        public ReceiveInfo ReceiveInfo { get; set; }
+        public ReceiveInfo? ReceiveInfo { get; set; }
 
     }
 

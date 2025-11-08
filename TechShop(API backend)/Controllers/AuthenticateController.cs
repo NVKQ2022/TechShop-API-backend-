@@ -371,7 +371,7 @@ namespace TechShop_API_backend_.Controllers
 
 
         [Authorize]
-        [HttpPut("changePassword/Authenticated")]
+        [HttpPut("changePassword")]
         public async Task
             <IActionResult> ChangePasswordAuthenticated([FromBody] ChangePasswordDto changePasswordDto) //DONE
         {
@@ -414,28 +414,36 @@ namespace TechShop_API_backend_.Controllers
 
 
         [AllowAnonymous]
-        [HttpPut("changePassword/Forgot")]
-        public async Task<IActionResult> ChangePasswordOnForgot([FromBody] ChangePasswordDto changePasswordDto) //DONE
+        [HttpPut("ResetPassword")]
+        public async Task<IActionResult> ChangePasswordOnForgot([FromBody] ForgotPasswordDto forgotPasswordDto) //DONE
         {
             try
             {
-                var user = await _userRepository.GetUserByEmailAsync(changePasswordDto.Email);
+                var user = await _userRepository.GetUserByEmailAsync(forgotPasswordDto.email);
                 if (user == null)
                     return BadRequest("User not found.");
-                var isMatched = await _verificationCodeRepository.VerifyAsync(user.Id, "EMAIL_VERIFY", changePasswordDto.OTP);
-                if (!isMatched)
+
+                var isVerified = await _verificationCodeRepository.IsVerifyCodeUsed(forgotPasswordDto.email, "PASSWORD_RESET" , forgotPasswordDto.Otp);
+                if (!isVerified)
                 {
-                    return BadRequest("Invalid or expired OTP code.");
+                    return BadRequest("OTP is incorrect or has not been used for verification.");
                 }
-                var result = SecurityHelper.CheckPasswordStrength(changePasswordDto.NewPassword);
+                var result = SecurityHelper.CheckPasswordStrength(forgotPasswordDto.confirmPassword);
                 if (result.IsStrong == false)
                 {
                     return BadRequest($"The password  is not strong enough");
                 }
+
+
                 // Update password
+                if (forgotPasswordDto.newPassword != forgotPasswordDto.confirmPassword)
+                {
+                    return BadRequest("Password and Confirm Password do not match");
+                }
+
                 var salt = SecurityHelper.GenerateSalt();
-                var hashedPassword = SecurityHelper.HashPassword(changePasswordDto.NewPassword, salt);
-                user.Password = hashedPassword;
+                var newHashedPassword = SecurityHelper.HashPassword(forgotPasswordDto.confirmPassword, salt);
+                user.Password = newHashedPassword;
                 user.Salt = salt;
                 bool updateResult = await _userRepository.UpdateUserAsync(user);
                 if (!updateResult)
@@ -456,8 +464,8 @@ namespace TechShop_API_backend_.Controllers
 
 
         [AllowAnonymous]
-        [HttpGet("Email/Opt/{email}")]
-        public async Task<IActionResult> EmailOPT(string email)
+        [HttpGet("Email/Opt/Sent/ForgotPassword")]
+        public async Task<IActionResult> EmailOPT([FromBody] string email)
         {
             try
             {
@@ -476,7 +484,7 @@ namespace TechShop_API_backend_.Controllers
                     UserId = user.Id,
                     Email = user.Email,
                     Code = otp,
-                    Type = "EMAIL_VERIFY",
+                    Type = "PASSWORD_RESET",
                     ExpiresAt = DateTime.Now.AddMinutes(10),
                     IsUsed = false,
                     CreatedAt = DateTime.Now
@@ -486,7 +494,7 @@ namespace TechShop_API_backend_.Controllers
 
                 return Ok(new
                 {
-                    Message = "Verification email sent successfully.",
+                    Message = "Verification code email sent successfully.",
                     Email = user.Email
                 });
             }
@@ -510,18 +518,19 @@ namespace TechShop_API_backend_.Controllers
 
 
         [AllowAnonymous]
-        [HttpPost("testEmail/Opt/Verify")]
-        public async Task<IActionResult> OPTVerify([FromBody] string otp) //DONE
+        [HttpPost("Email/Opt/Verify/PassWord")]
+        public async Task<IActionResult> OPTVerify([FromBody] VerifyOtpDto verifyOtpDto) //DONE
         {
             try
             {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+               
               
 
-                var isMatched =await _verificationCodeRepository.VerifyAsync(int.Parse(userId!), "EMAIL_VERIFY",otp);
+                var isMatched =await _verificationCodeRepository.VerifyAsync(verifyOtpDto.email, "PASSWORD_RESET",verifyOtpDto.otp);
 
                 if (isMatched) 
                 {
+                   
                     return Ok("Verified");
                 }
                 else

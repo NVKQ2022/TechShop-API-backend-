@@ -68,9 +68,12 @@ namespace TechShop_API_backend_.OrderControllers
         }
 
 
-        // POST api/<ValuesController>
-        [HttpPost("create")]
-        public async Task<IActionResult> CreateOrder([FromBody] OrderCreateRequest request)
+        //// POST api/<ValuesController>
+        
+
+
+        [HttpPost("prepare")]
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim))
@@ -84,50 +87,50 @@ namespace TechShop_API_backend_.OrderControllers
 
             int totalCalculatedAmount = 0;
             List<OrderItem> orderItemsVerify = new List<OrderItem>();
-            request.Items.ForEach(async item =>
+
+            // Use a normal foreach loop instead of ForEach to allow async/await
+            foreach (var item in request.Items)
             {
-
-
-
-                if (item.Quantity <= 0 || item.UnitPrice < 0)
+                if (item.Quantity <= 0)
                 {
-                    throw new ArgumentException("Item quantity must be greater than 0 and price cannot be negative.");
+                    return BadRequest("Item quantity must be greater than 0 and price cannot be negative.");
                 }
 
-
-                
-
-                _productRepository.DecreaseProductStockAsync(item.ProductID, item.Quantity).Wait();
-                Product product = await _productRepository.GetByIdAsync(item.ProductID);
-                orderItemsVerify.Add((converterHelper.ConvertProductToOrderItem(product, item.Quantity)));
-            if (product == null)
+                // Check stock availability asynchronously
+                var isStockAvailable = await _productRepository.CheckProductStockAsync(item.ProductId, item.Quantity);
+                if (!isStockAvailable)
                 {
-                    throw new ArgumentException($"Product with ID {item.ProductID} not found.");
+                    return BadRequest($"Insufficient stock for product ID: {item.ProductId}");
                 }
-               
+
+                // Get product details
+                Product product = await _productRepository.GetByIdAsync(item.ProductId);
+                if (product == null)
+                {
+                    return BadRequest($"Product with ID {item.ProductId} not found.");
+                }
+
+                // Add the product to the order items after converting it
+                orderItemsVerify.Add(converterHelper.ConvertProductToOrderItem(product, item.Quantity));
+
+                // Calculate total amount
                 totalCalculatedAmount += product.Price * item.Quantity;
-
-
-            });
-
+            }
 
             var newOrder = new Order
             {
                 UserID = userId,
                 Items = orderItemsVerify,
                 TotalAmount = totalCalculatedAmount,
-                PaymentMethod = request.PaymentMethod,
-                Status = "Pending",
+                Status = "NotConfirm",
                 CreatedAt = DateTime.UtcNow,
-                ReceiveInfo = request.ReceiveInfo
             };
 
+            // Save the order to the database
             await _orderRepository.CreateOrderAsync(newOrder);
-            return Ok(new { message = "Order created successfully.", order = newOrder });
+
+            return Ok(new { message = "Order waiting to be confirmed.", order = newOrder });
         }
-
-
-
 
 
 
@@ -153,6 +156,9 @@ namespace TechShop_API_backend_.OrderControllers
                 return NotFound("Order not found or already deleted.");
             return Ok("Order deleted successfully.");
         }
+
+
+
 
 
 

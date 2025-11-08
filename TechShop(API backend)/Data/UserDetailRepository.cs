@@ -19,13 +19,7 @@ namespace TechShop_API_backend_.Data
 
 
 
-        public async Task EnsureWishlistFieldExists()
-        {
-            var filter = Builders<UserDetail>.Filter.Exists(u => u.Wishlist, false);
-            var update = Builders<UserDetail>.Update.Set(u => u.Wishlist, new List<WishlistItem>());
-            await _userDetail.UpdateManyAsync(filter, update);
-        }
-
+       
 
 
 
@@ -108,28 +102,6 @@ namespace TechShop_API_backend_.Data
             await _userDetail.InsertOneAsync(user);
         }
 
-        public async Task<int>CountCartItems(int userId)
-        {
-
-            var user = await GetUserByUserId(userId); // Assuming synchronous call
-
-            if (user == null || user.Cart == null)
-                return 0;
-
-            return user.Cart.Count; // Count of different CartItem entries
-        }
-        public async Task<List<CartItem>> GetCartItemsAsync(int userId)
-        {
-            var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
-
-            var projection = Builders<UserDetail>.Projection.Include(u => u.Cart);
-
-            var result = await _userDetail.Find(filter).Project<UserDetail>(projection).FirstOrDefaultAsync();
-
-            return result?.Cart ?? new List<CartItem>();
-        }
-
-
         public async Task<List<string>> GetCategoriesByPointDescending(int userId)
         {
             var user = await GetUserByUserId(userId);
@@ -141,47 +113,36 @@ namespace TechShop_API_backend_.Data
                        .Select(pair => pair.Key)
                        .ToList();
         }
-        public async Task<bool> AddCartItemAsync(int userId, CartItem item)
+        
+        // WISHLIST
+
+
+
+        public async Task EnsureWishlistFieldExists()
         {
-            var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
-            //var update = Builders<UserDetail>.Update.Push(u => u.Cart, item);
-            //await _userDetail.UpdateOneAsync(filter, update);
-
-            var user = await _userDetail.Find(filter).FirstOrDefaultAsync();
-            if (user == null)
-            {
-                throw new Exception("User not found.");
-            }
-
-            var existingItem = user.Cart.FirstOrDefault(i => i.ProductId == item.ProductId); 
-
-            if (existingItem != null)
-            {
-                //// Update quantity (you can customize what "updating" means)
-                //var update = Builders<UserDetail>.Update
-                //    .Set(u => u.Cart[-1].Quantity, existingItem.Quantity + item.Quantity);
-
-                //// Match user and the specific cart item by product ID
-                //var arrayFilter = Builders<UserDetail>.Filter.And(
-                //    filter,
-                //    Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, i => i.ProductId == item.ProductId)
-                //);
-
-                InsertCartItemQuantityAsync(userId, item.ProductId, existingItem.Quantity + item.Quantity);
-                //await _userDetail.UpdateOneAsync(arrayFilter, update);
-                return false;
-            }
-            else
-            {
-                // Add new cart item
-                var update = Builders<UserDetail>.Update.Push(u => u.Cart, item);
-                await _userDetail.UpdateOneAsync(filter, update);
-                return true; // New item addedS
-            }
+            var filter = Builders<UserDetail>.Filter.Exists(u => u.Wishlist, false);
+            var update = Builders<UserDetail>.Update.Set(u => u.Wishlist, new List<WishlistItem>());
+            await _userDetail.UpdateManyAsync(filter, update);
         }
 
-       
+        public async Task<bool> IsProductInWishlistAsync(int userId, string productId)
+        {
+            // Find the user by UserId
+            var userDetail = await _userDetail
+                .Find(u => u.UserId == userId)
+                .FirstOrDefaultAsync();
 
+            if (userDetail == null)
+            {
+                // User not found, return false
+                return false;
+            }
+
+            // Check if the product exists in the wishlist
+            var isProductInWishlist = userDetail.Wishlist.Any(w => w.ProductId == productId);
+
+            return isProductInWishlist;
+        }
 
         public async Task<bool> AddWishlistItemAsync(int userId, WishlistItem item)
         {
@@ -259,6 +220,89 @@ namespace TechShop_API_backend_.Data
 
 
 
+
+
+
+        // CART
+        public async Task<bool> IsProductInCartAsync(int userId, string productId)
+        {
+            // Find the user by UserId
+            var userDetail = await _userDetail
+                .Find(u => u.UserId == userId)
+                .FirstOrDefaultAsync();
+
+            if (userDetail == null)
+            {
+                // User not found, return false
+                return false;
+            }
+
+            // Check if the product exists in the cart
+            var isProductInCart = userDetail.Cart.Any(c => c.ProductId == productId);
+
+            return isProductInCart;
+        }
+
+        public async Task<bool> AddCartItemAsync(int userId, CartItem item)
+        {
+            var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
+            //var update = Builders<UserDetail>.Update.Push(u => u.Cart, item);
+            //await _userDetail.UpdateOneAsync(filter, update);
+
+            var user = await _userDetail.Find(filter).FirstOrDefaultAsync();
+            if (user == null)
+            {
+                throw new Exception("User not found.");
+            }
+
+            var existingItem = user.Cart.FirstOrDefault(i => i.ProductId == item.ProductId);
+
+            if (existingItem != null)
+            {
+                //// Update quantity (you can customize what "updating" means)
+                //var update = Builders<UserDetail>.Update
+                //    .Set(u => u.Cart[-1].Quantity, existingItem.Quantity + item.Quantity);
+
+                //// Match user and the specific cart item by product ID
+                //var arrayFilter = Builders<UserDetail>.Filter.And(
+                //    filter,
+                //    Builders<UserDetail>.Filter.ElemMatch(u => u.Cart, i => i.ProductId == item.ProductId)
+                //);
+
+                InsertCartItemQuantityAsync(userId, item.ProductId, existingItem.Quantity + item.Quantity);
+                //await _userDetail.UpdateOneAsync(arrayFilter, update);
+                return false;
+            }
+            else
+            {
+                // Add new cart item
+                var update = Builders<UserDetail>.Update.Push(u => u.Cart, item);
+                await _userDetail.UpdateOneAsync(filter, update);
+                return true; // New item addedS
+            }
+        }
+
+
+        public async Task<int> CountCartItems(int userId)
+        {
+
+            var user = await GetUserByUserId(userId); // Assuming synchronous call
+
+            if (user == null || user.Cart == null)
+                return 0;
+
+            return user.Cart.Count; // Count of different CartItem entries
+        }
+        public async Task<List<CartItem>> GetCartItemsAsync(int userId)
+        {
+            var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
+
+            var projection = Builders<UserDetail>.Projection.Include(u => u.Cart);
+
+            var result = await _userDetail.Find(filter).Project<UserDetail>(projection).FirstOrDefaultAsync();
+
+            return result?.Cart ?? new List<CartItem>();
+        }
 
 
         public async Task<int?> UpdateCartItemQuantityAsync(int userId, string productId, int changeAmount)
@@ -344,6 +388,13 @@ namespace TechShop_API_backend_.Data
         }
 
 
+
+
+
+
+
+
+        //RECEIVE INFO
         public async Task<List<ReceiveInfo>> GetReceiveInfoAsync(int userId)
         {
             var filter = Builders<UserDetail>.Filter.Eq(u => u.UserId, userId);
@@ -394,6 +445,14 @@ namespace TechShop_API_backend_.Data
             var update = Builders<UserDetail>.Update.Set(u => u.PhoneNumber, newPhoneNumber);
             await _userDetail.UpdateOneAsync(filter, update);
         }
+
+
+
+
+
+
+
+
 
         public async Task InsertUserCategoriesAsync(int userId, List<string> categoryNames)
         {

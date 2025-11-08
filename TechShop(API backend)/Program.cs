@@ -11,13 +11,16 @@ using TechShop_API_backend_.Data.Authenticate;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using TechShop.API.Repositories;
+using TechShop_API_backend_.Helpers;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+//builder.WebHost.UseUrls("http://*:8080");
 
 builder.Services.AddControllers();
 
 // Add custom services
+builder.Services.AddScoped<ConverterHelper>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<AuthenticationRepository>();

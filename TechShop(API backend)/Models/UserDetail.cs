@@ -24,14 +24,14 @@ namespace TechShop_API_backend_.Models
         public List<WishlistItem> Wishlist { get; set; }
         public List<ReceiveInfo> ReceiveInfo { get; set; }
 
-      
+
 
         [BsonDateTimeOptions(Kind = DateTimeKind.Utc)]
         public DateTime Birthday { get; set; }
 
         public Banking Banking { get; set; }
-       
-        
+
+
     }
 
     public class Banking
@@ -39,15 +39,4 @@ namespace TechShop_API_backend_.Models
         public string BankAccount { get; set; }
         public string CreditCard { get; set; }
     }
-    //public class CartItem
-    //{
-    //    [BsonRepresentation(BsonType.ObjectId)]
-    //    public string ProductId { get; set; }
-
-    //    public string ProductName { get; set; }
-    //    public string Image { get; set; }
-
-    //    public int Quantity { get; set; }
-    //    public int UnitPrice { get; set; }
-    //}
 }

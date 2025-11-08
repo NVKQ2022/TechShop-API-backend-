@@ -2,10 +2,14 @@
 
 namespace TechShop_API_backend_.DTOs.Order
 {
-    public class OrderCreateRequest
+    public class CreateOrderRequest
     {
-        public List<OrderItem> Items { get; set; }
-        public string PaymentMethod { get; set; }
-        public ReceiveInfo ReceiveInfo { get; set; }
+        public List<Item> Items { get; set; }
+        
+    }
+    public class Item
+    {
+        public string ProductId { get; set; }
+        public int Quantity { get; set; }
     }
 }

@@ -26,6 +26,16 @@ namespace TechShop_API_backend_.Controllers
             _productRepository = productRepository;
         }
 
+        [Authorize]
+        [HttpGet("check")]
+        public async Task<IActionResult> CheckIsAdded(string productId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var success = await _userDetailRepository.IsProductInCartAsync(int.Parse(userId), productId);
+
+
+            return Ok(success);
+        }
 
         // ✅ Get all cart items for the current user
         [HttpGet]

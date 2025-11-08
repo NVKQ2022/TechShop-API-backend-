@@ -276,6 +276,27 @@ public class ProductRepository
 
 
 
+
+    public async Task<bool> CheckProductStockAsync(string productId, int amount)
+    {
+        if (amount <= 0)
+            throw new ArgumentException("Amount must be greater than 0.");
+
+        // Build filter to find product by its ID
+        var filter = Builders<Product>.Filter.Eq(p => p.ProductId, productId);
+
+        // Find the product in the database
+        var product = await _products.Find(filter).FirstOrDefaultAsync();
+
+        if (product == null)
+            throw new InvalidOperationException("Product not found.");
+
+        // Check if the product has enough stock
+        return product.Stock >= amount;
+    }
+
+
+
     public async Task<bool> DecreaseProductStockAsync(string productId, int amount)
     {
         if (amount <= 0)
