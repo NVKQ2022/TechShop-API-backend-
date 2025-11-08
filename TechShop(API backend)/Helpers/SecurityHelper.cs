@@ -125,6 +125,19 @@ namespace TechShop_API_backend_.Helpers
             }
         }
 
+        public static string GenerateVerificationToken(string email)
+        {
+            // Combine the email with a timestamp for uniqueness
+            string rawToken = email + DateTime.UtcNow.Ticks.ToString();
+
+            // Create an HMACSHA256 hash from the raw token and a secret key
+            using (HMACSHA256 hmac = new HMACSHA256(Encoding.UTF8.GetBytes(myPepper)))
+            {
+                byte[] tokenBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(rawToken));
+                return Convert.ToBase64String(tokenBytes); // Base64 encode the token
+            }
+        }
+
 
     }
 }

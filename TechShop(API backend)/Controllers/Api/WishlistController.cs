@@ -7,7 +7,7 @@ using TechShop_API_backend_.Models;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace TechShop_API_backend_.Controllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -24,7 +24,7 @@ namespace TechShop_API_backend_.Controllers
         [Authorize]
         [HttpGet()]
         public async Task<IActionResult> GetWishlist()
-        { 
+        {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var user = await _userDetailRepository.GetUserByUserId(int.Parse(userId));
             if (user == null)
@@ -41,7 +41,7 @@ namespace TechShop_API_backend_.Controllers
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var success = await _userDetailRepository.IsProductInWishlistAsync(int.Parse(userId), productId);
-            
+
 
             return Ok(success);
         }
@@ -55,7 +55,7 @@ namespace TechShop_API_backend_.Controllers
             if (wishlistItem == null || string.IsNullOrEmpty(wishlistItem.ProductId))
                 return BadRequest("Invalid wishlist item data.");
 
-            
+
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var success = await _userDetailRepository.AddWishlistItemAsync(int.Parse(userId), wishlistItem);
             if (!success)

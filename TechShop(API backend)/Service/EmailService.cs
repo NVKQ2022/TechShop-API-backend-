@@ -11,7 +11,10 @@ namespace TechShop_API_backend_.Service
 
         private static readonly string serverEmailPassword =Environment.GetEnvironmentVariable("Security__Password")
         ?? throw new InvalidOperationException("Server password environment variable is not set.");
-        
+
+        private static readonly string baseUrl = Environment.GetEnvironmentVariable("BaseUrl")
+        ?? throw new InvalidOperationException("Base Url environment variable is not set.");
+
 
         public static void SendOptEmail(string targetEmail, string otp)
         {
@@ -71,7 +74,7 @@ namespace TechShop_API_backend_.Service
                 string htmlBody = File.ReadAllText(templatePath);
 
                 // Replace placeholders
-                string verifyUrl = $"https://yourapp.com/verify?email={Uri.EscapeDataString(targetEmail)}&token={verifyToken}";
+                string verifyUrl = $"{baseUrl}/verify?email={Uri.EscapeDataString(targetEmail)}&token={verifyToken}";
                 htmlBody = htmlBody.Replace("{{VERIFY_LINK}}", verifyUrl);
 
                 // Create and send email

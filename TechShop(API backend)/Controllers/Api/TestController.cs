@@ -5,9 +5,10 @@ using TechShop.API.Models;
 using TechShop.API.Repositories;
 using TechShop_API_backend_.Data;
 using TechShop_API_backend_.Data.Authenticate;
+using TechShop_API_backend_.Helpers;
 using TechShop_API_backend_.Service;
 
-namespace TechShop_API_backend_.Controllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -18,6 +19,7 @@ namespace TechShop_API_backend_.Controllers
         VerificationCodeRepository _verificationCodeRepository;
         UserDetailRepository _userDetailRepository;
         ProductRepository _productRepository;
+        SecurityHelper _securityHelper;
         JwtService _jwtService;
         EmailService emailService;
         private readonly ILogger<AuthenticateController> _logger;
@@ -25,7 +27,19 @@ namespace TechShop_API_backend_.Controllers
         private string _googleClientId = Environment.GetEnvironmentVariable("GoogleOAuth__ClientId") ?? "";
 
 
-        public TestController(IConfiguration config, UserRepository userRepository, UserDetailRepository userDetailRepository, ProductRepository productRepository, JwtService jwtService, ILogger<AuthenticateController> logger, AuthProviderRepository authProviderRepository, VerificationCodeRepository verificationCodeRepository, EmailService emailService)
+        public TestController(
+                            IConfiguration config,
+                            UserRepository userRepository,
+                            UserDetailRepository userDetailRepository,
+                            ProductRepository productRepository,
+                            JwtService jwtService,
+                            ILogger<AuthenticateController> logger,
+                            AuthProviderRepository authProviderRepository,
+                            VerificationCodeRepository verificationCodeRepository,
+                            EmailService emailService,
+                            SecurityHelper securityHelper
+                            )
+
         {
             _config = config;
             _productRepository = productRepository;
@@ -36,6 +50,7 @@ namespace TechShop_API_backend_.Controllers
             _authProviderRepository = authProviderRepository;
             _verificationCodeRepository = verificationCodeRepository;
             this.emailService = emailService;
+            _securityHelper = securityHelper;
         }
 
 
@@ -113,7 +128,7 @@ namespace TechShop_API_backend_.Controllers
             await _productRepository.EnsureAllProductsHaveSaleInfoAsync();
             return Ok();
         }
-        
+
 
         [AllowAnonymous]
         [HttpPost("RandomSale/{number}")]
@@ -125,8 +140,8 @@ namespace TechShop_API_backend_.Controllers
         }
 
         [AllowAnonymous]
-        [HttpPost("EmailVerify/{targetEmail}")]
-        public async Task<IActionResult> EmailVerify(string targetEmail = "23521267@gm.uit.edu.vn") //DONE
+        [HttpPost("EmailVerify/Send}")]
+        public async Task<IActionResult> EmailVerify([FromBody] string targetEmail) //DONE
         {
 
 
@@ -134,9 +149,9 @@ namespace TechShop_API_backend_.Controllers
             {
 
                 // verified email 
+                var token = SecurityHelper.GenerateVerificationToken(targetEmail);
 
-
-                EmailService.SendVerificationEmail(targetEmail, "1234567890");
+                EmailService.SendVerificationEmail(targetEmail, token);
 
                 return Ok();
             }

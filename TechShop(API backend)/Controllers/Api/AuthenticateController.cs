@@ -25,7 +25,7 @@ using FirebaseAdmin.Auth;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace TechShop_API_backend_.Controllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -43,7 +43,7 @@ namespace TechShop_API_backend_.Controllers
         EmailService emailService;
         private readonly ILogger<AuthenticateController> _logger;
         private readonly AuthProviderRepository _authProviderRepository;
-        private string _googleClientId =   Environment.GetEnvironmentVariable("GoogleOAuth__ClientId") ?? "";
+        private string _googleClientId = Environment.GetEnvironmentVariable("GoogleOAuth__ClientId") ?? "";
         public AuthenticateController(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
         {
 
@@ -56,7 +56,7 @@ namespace TechShop_API_backend_.Controllers
 
 
             _config = config;
-            _authProviderRepository=authProviderRepository;
+            _authProviderRepository = authProviderRepository;
             _verificationCodeRepository = verificationCodeRepository;
             _userRepository = userRepository;
             _jwtService = jwtService;
@@ -105,9 +105,9 @@ namespace TechShop_API_backend_.Controllers
             {
                 var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(request.IdToken);
 
-                string uid= string.Empty;
-                string email= string.Empty;
-                string provider= string.Empty;
+                string uid = string.Empty;
+                string email = string.Empty;
+                string provider = string.Empty;
                 if (decodedToken.Claims != null && decodedToken.Claims.TryGetValue("firebase", out var firebaseObj))
                 {
                     // firebaseObj is usually a Dictionary<string, object>
@@ -119,9 +119,9 @@ namespace TechShop_API_backend_.Controllers
                         email = decodedToken.Claims.ContainsKey("email") ? decodedToken.Claims["email"].ToString() : null;
                         provider = signInProviderObj.ToString(); // e.g. "google.com", "facebook.com", "apple.com"
                     }
-                  
+
                 }
-                
+
 
                 // Find or create user in your DB
                 var user = await _userRepository.GetUserByEmailAsync(email);
@@ -253,7 +253,7 @@ namespace TechShop_API_backend_.Controllers
             }
         }
 
-       
+
 
 
 
@@ -277,7 +277,15 @@ namespace TechShop_API_backend_.Controllers
 
             try
             {
-                var result = await _jwtService.Authenticate(loginRequest);
+                var user = await _userRepository.GetUserByUsernameAsync(loginRequest.Username);
+
+                if (!user.IsEmailVerified)
+                {
+                    _logger.LogWarning("Login attempt with unverified email for username: {Username}.", loginRequest.Username);
+                    return Unauthorized(new { Message = "Email not verified. Please verify your email before logging in." });
+                }
+
+                    var result = await _jwtService.Authenticate(loginRequest);
 
                 if (result == null)
                 {
@@ -302,6 +310,54 @@ namespace TechShop_API_backend_.Controllers
 
 
 
+        [AllowAnonymous]
+        [HttpPost("EmailVerify/Resend}")]
+        public async Task<IActionResult> EmailVerify([FromBody] string targetEmail) //DONE
+        {
+
+
+            try
+            {
+                // prevent spaming mail with some rate limit logic later (e.g., allow resend only once every 5 minutes)
+
+                // verified email 
+                var token = SecurityHelper.GenerateVerificationToken(targetEmail);
+
+                EmailService.SendVerificationEmail(targetEmail, token);
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpPost("EmailVerify/Check")]
+
+        public async Task<IActionResult> EmailVerifyCheck([FromBody] VerifyEmailDto verifyEmailDto) //DONE
+        {
+            try
+            {
+                var isMatched = await _verificationCodeRepository.VerifyAsync(verifyEmailDto.email, "EMAIL_VERIFY", verifyEmailDto.token);
+                if (isMatched)
+                {
+                    return Ok("Verified");
+                }
+                else
+                {
+                    return BadRequest("Wrong token code or email not found");
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
+            }
+        }
+
+
+
         // POST api/<AuthenticateController>
 
 
@@ -314,7 +370,7 @@ namespace TechShop_API_backend_.Controllers
             {
                 return BadRequest(ModelState);
             }
-            if( newUser.Password != newUser.ConfirmPassword)
+            if (newUser.Password != newUser.ConfirmPassword)
             {
                 return BadRequest("Password and Confirm Password do not match");
             }
@@ -328,13 +384,11 @@ namespace TechShop_API_backend_.Controllers
             try
             {
 
-                // verified email 
-
-
+                
 
 
                 // 3. Create the user with hashed password
-                var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, string.Empty,false);
+                var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, string.Empty, false, false);
                 if (createdUser.ErrorMessage == "Email already exists")
                 {
                     _logger.LogWarning("Registration failed: Email {Email} is already in use.", newUser.Email);
@@ -347,15 +401,32 @@ namespace TechShop_API_backend_.Controllers
                 }
                 // 4. Log successful registration
                 _logger.LogInformation("User successfully registered: {Username}.", newUser.Username);
-                var token = await _jwtService.Authenticate(
-                new Models.Api.LoginRequest
+                //var token = await _jwtService.Authenticate(
+                //new Models.Api.LoginRequest
+                //{
+                //    Username = newUser.Username,
+                //    Password = newUser.Password
+                //});
+
+
+
+                // verified email 
+                var verificationCode = new VerificationCode
                 {
-                    Username = newUser.Username,
-                    Password = newUser.Password
-                });
+                    UserId = createdUser.CreatedUser.Id,
+                    Code = SecurityHelper.GenerateVerificationToken(newUser.Email),
+                    Email = newUser.Email,
+                    Type = "EMAIL_VERIFY",
+                    ExpiresAt = DateTime.Now.AddHours(24),
+                    IsUsed = false,
+                    CreatedAt = DateTime.Now
+
+                };
+
+                await _verificationCodeRepository.CreateAsync(verificationCode);
 
                 // 5. Return CreatedAtAction for the login endpoint to indicate successful creation
-                return Ok(token); // Respond with status 201 Created
+                return Ok("please verify your email then login again"); // Respond with status 201 Created
             }
             catch (Exception ex)
             {
@@ -423,7 +494,7 @@ namespace TechShop_API_backend_.Controllers
                 if (user == null)
                     return BadRequest("User not found.");
 
-                var isVerified = await _verificationCodeRepository.IsVerifyCodeUsed(forgotPasswordDto.email, "PASSWORD_RESET" , forgotPasswordDto.Otp);
+                var isVerified = await _verificationCodeRepository.IsVerifyCodeUsed(forgotPasswordDto.email, "PASSWORD_RESET", forgotPasswordDto.Otp);
                 if (!isVerified)
                 {
                     return BadRequest("OTP is incorrect or has not been used for verification.");
@@ -456,11 +527,11 @@ namespace TechShop_API_backend_.Controllers
             {
                 return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
             }
-        }   
+        }
 
 
 
-        
+
 
 
         [AllowAnonymous]
@@ -469,7 +540,7 @@ namespace TechShop_API_backend_.Controllers
         {
             try
             {
-                
+
 
                 var user = await _userRepository.GetUserByEmailAsync(email);
                 if (user == null)
@@ -495,7 +566,7 @@ namespace TechShop_API_backend_.Controllers
                 return Ok(new
                 {
                     Message = "Verification code email sent successfully.",
-                    Email = user.Email
+                    user.Email
                 });
             }
             catch (Exception ex)
@@ -511,8 +582,8 @@ namespace TechShop_API_backend_.Controllers
 
 
 
-        
-       
+
+
 
 
 
@@ -523,14 +594,14 @@ namespace TechShop_API_backend_.Controllers
         {
             try
             {
-               
-              
 
-                var isMatched =await _verificationCodeRepository.VerifyAsync(verifyOtpDto.email, "PASSWORD_RESET",verifyOtpDto.otp);
 
-                if (isMatched) 
+
+                var isMatched = await _verificationCodeRepository.VerifyAsync(verifyOtpDto.email, "PASSWORD_RESET", verifyOtpDto.otp);
+
+                if (isMatched)
                 {
-                   
+
                     return Ok("Verified");
                 }
                 else

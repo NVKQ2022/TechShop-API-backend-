@@ -10,7 +10,7 @@ using System.Security.Claims;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace TechShop_API_backend_.Controllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -70,12 +70,12 @@ namespace TechShop_API_backend_.Controllers
         [HttpGet("Fetch/{category}/{number}")]
         public async Task<IActionResult> GetListProductsWithCategory(int number, string category)
         {
-            
+
 
             List<Product> products;
 
             products = await productRepository.GetByCategoryAsync(category);
-           
+
 
             // Convert the list of products into the required format (e.g., a zip list or any transformation)
             var productZip = converterHelper.ConvertProductListToProductZipList(products);
@@ -165,9 +165,9 @@ namespace TechShop_API_backend_.Controllers
 
 
                 await productRepository.DeleteAsync(id.ToString());
-                return (Ok(" the product has been deleted"));
+                return Ok(" the product has been deleted");
 
-                
+
             }
             catch (Exception ex)
             {

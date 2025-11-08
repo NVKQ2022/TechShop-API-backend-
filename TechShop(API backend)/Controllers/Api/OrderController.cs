@@ -9,7 +9,7 @@ using TechShop_API_backend_.Models;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace TechShop_API_backend_.OrderControllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -69,7 +69,7 @@ namespace TechShop_API_backend_.OrderControllers
 
 
         //// POST api/<ValuesController>
-        
+
 
 
         [HttpPost("prepare")]

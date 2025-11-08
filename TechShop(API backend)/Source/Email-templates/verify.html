@@ -1,22 +1,134 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Email Verification</title>
+    <style>
+        /* Global Styles */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f7f7f7;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: auto;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            padding: 40px;
+        }
+
+        .email-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+            .email-header h2 {
+                color: #4CAF50; /* Green for trust */
+                font-size: 30px;
+                font-weight: bold;
+                margin: 0;
+            }
+
+        .email-body {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .verify-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 30px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+            .verify-button:hover {
+                background-color: #45a049; /* Slightly darker green on hover */
+                transition: background-color 0.3s ease;
+            }
+
+        .instructions {
+            font-size: 14px;
+            color: #888;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            margin-top: 30px;
+            border-top: 1px solid #f1f1f1;
+            padding-top: 15px;
+        }
+
+            .footer a {
+                color: #4CAF50;
+                text-decoration: none;
+            }
+
+        /* Responsive Styles */
+        @media (max-width: 600px) {
+            .email-container {
+                padding: 20px;
+            }
+
+            .email-header h2 {
+                font-size: 24px;
+            }
+
+            .verify-button {
+                padding: 12px 25px;
+                font-size: 14px;
+            }
+
+            .email-body {
+                font-size: 14px;
+            }
+        }
+    </style>
 </head>
-<body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;">
-    <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 8px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-        <h2 style="color: #4CAF50; text-align: center;">Verify Your Email</h2>
-        <p>Hello,</p>
-        <p>Thank you for registering. Please click the button below to verify your email address.</p>
-        <div style="text-align: center; margin: 30px 0;">
-            <a href="{{VERIFY_LINK}}"
-               style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-                Verify My Email
-            </a>
+<body>
+    <div class="email-container">
+        <!-- Header Section -->
+        <div class="email-header">
+            <h2>Email Verification</h2>
         </div>
-        <p>If you didn’t request this email, please ignore it.</p>
-        <p style="color: #999; font-size: 12px;">This link will expire in 24 hours.</p>
+
+        <!-- Body Section -->
+        <div class="email-body">
+            <p>Hello,</p>
+            <p>Thank you for registering with us! To complete your registration and start using your account, please verify your email address by clicking the button below:</p>
+
+            <!-- Verification Button -->
+            <div style="text-align: center;">
+                <a href="{{VERIFY_LINK}}" class="verify-button">Verify My Email</a>
+            </div>
+
+            <p class="instructions">If you didn’t request this email, please ignore it.</p>
+            <p style="font-size: 12px; color: #999;">This link will expire in 24 hours.</p>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="footer">
+            <p>Thank you for using our service!</p>
+            <p>If you have any issues, feel free to <a href="mailto:support@example.com">contact us</a>.</p>
+        </div>
     </div>
 </body>
 </html>
