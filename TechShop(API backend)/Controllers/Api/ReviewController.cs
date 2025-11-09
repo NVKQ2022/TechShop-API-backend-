@@ -9,7 +9,7 @@ using Amazon.S3.Model;
 using TechShop_API_backend_.Service;
 using TechShop_API_backend_.DTOs.Review;
 
-namespace TechShop_API_backend_.Controllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -17,7 +17,7 @@ namespace TechShop_API_backend_.Controllers
     {
 
         ReviewRepository _reviewRepository;
-        private readonly ProductRepository _productRepository;  
+        private readonly ProductRepository _productRepository;
         private readonly string _imageDirectory = Path.Combine(Directory.GetCurrentDirectory(), "UploadedImages");
         private readonly IAmazonS3 _s3Client;
         private readonly ImageService _imageService;
@@ -29,11 +29,11 @@ namespace TechShop_API_backend_.Controllers
         }
 
         // GET: api/review
-        [Authorize (Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var reviews = await _reviewRepository.GetAllAsync();    
+            var reviews = await _reviewRepository.GetAllAsync();
             return Ok(reviews);
         }
 
@@ -47,7 +47,7 @@ namespace TechShop_API_backend_.Controllers
 
         // GET: api/review/{id}
         [HttpGet("{id:length(24)}", Name = "GetReview")]
-        public async Task<IActionResult> GetById(int id)    
+        public async Task<IActionResult> GetById(int id)
         {
             var review = await _reviewRepository.GetReviewsByUserIdAsync(id);
             if (review == null)
@@ -120,11 +120,11 @@ namespace TechShop_API_backend_.Controllers
             {
                 return NoContent();
             }
-                     
+
             return NotFound();
 
-            
-          
+
+
         }
     }
 

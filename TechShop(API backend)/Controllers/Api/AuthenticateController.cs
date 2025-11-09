@@ -319,6 +319,13 @@ namespace TechShop_API_backend_.Controllers.Api
             try
             {
                 // prevent spaming mail with some rate limit logic later (e.g., allow resend only once every 5 minutes)
+                var verificationCode = await  _verificationCodeRepository.GetLatestAsync(targetEmail, "EMAIL_VERIFY");
+                // Check if a recent code was sent (rate limiting — allow resend only every 5 minutes)
+                if (verificationCode != null && (DateTime.Now - verificationCode.CreatedAt).TotalMinutes < 5)
+                {
+                    var remaining = 5 - (DateTime.Now - verificationCode.CreatedAt).TotalMinutes;
+                    return BadRequest(new { Message = $"Please wait {Math.Ceiling(remaining)} more minute(s) before requesting another verification email." });
+                }
 
                 // verified email 
                 var token = SecurityHelper.GenerateVerificationToken(targetEmail);
@@ -333,16 +340,20 @@ namespace TechShop_API_backend_.Controllers.Api
             }
         }
 
-        [AllowAnonymous]
-        [HttpPost("EmailVerify/Check")]
+       
 
-        public async Task<IActionResult> EmailVerifyCheck([FromBody] VerifyEmailDto verifyEmailDto) //DONE
+
+
+        [AllowAnonymous]
+        [HttpGet("verify")]
+        public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string token)
         {
             try
             {
-                var isMatched = await _verificationCodeRepository.VerifyAsync(verifyEmailDto.email, "EMAIL_VERIFY", verifyEmailDto.token);
+                var isMatched = await _verificationCodeRepository.VerifyAsync(email, "EMAIL_VERIFY", token);
                 if (isMatched)
-                {
+                { 
+                    await _verificationCodeRepository.DeleteAsync(email, "EMAIL_VERIFY", token);
                     return Ok("Verified");
                 }
                 else
@@ -357,11 +368,10 @@ namespace TechShop_API_backend_.Controllers.Api
         }
 
 
+            // POST api/<AuthenticateController>
 
-        // POST api/<AuthenticateController>
 
-
-        [AllowAnonymous]
+            [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] CreateUserDto newUser) //DONE
         {
@@ -499,6 +509,7 @@ namespace TechShop_API_backend_.Controllers.Api
                 {
                     return BadRequest("OTP is incorrect or has not been used for verification.");
                 }
+
                 var result = SecurityHelper.CheckPasswordStrength(forgotPasswordDto.confirmPassword);
                 if (result.IsStrong == false)
                 {
@@ -521,6 +532,8 @@ namespace TechShop_API_backend_.Controllers.Api
                 {
                     return StatusCode(500, "Failed to update password.");
                 }
+
+                await _verificationCodeRepository.DeleteAsync(forgotPasswordDto.email, "PASSWORD_RESET", forgotPasswordDto.Otp);
                 return Ok("Password changed successfully.");
             }
             catch (Exception ex)

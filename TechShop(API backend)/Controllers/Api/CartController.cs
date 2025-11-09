@@ -9,7 +9,7 @@ using TechShop_API_backend_.Helpers;
 using TechShop_API_backend_.Interfaces;
 using TechShop_API_backend_.Models;
 
-namespace TechShop_API_backend_.Controllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -20,7 +20,7 @@ namespace TechShop_API_backend_.Controllers
         ProductRepository _productRepository;
         ConverterHelper converterHelper = new ConverterHelper();
 
-        public CartController(UserDetailRepository userDetailRepository, ProductRepository productRepository) 
+        public CartController(UserDetailRepository userDetailRepository, ProductRepository productRepository)
         {
             _userDetailRepository = userDetailRepository;
             _productRepository = productRepository;
@@ -95,7 +95,7 @@ namespace TechShop_API_backend_.Controllers
 
         // ✅ Update the quantity of an existing item
         [HttpPut("update")]
-        public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemRequest request )
+        public async Task<IActionResult> UpdateCartItem([FromBody] UpdateCartItemRequest request)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim))

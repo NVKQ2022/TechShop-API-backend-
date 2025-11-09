@@ -9,7 +9,7 @@ using TechShop_API_backend_.Models.Authenticate;
 using TechShop_API_backend_.Data.Authenticate;
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace TechShop_API_backend_.Controllers.Administrator
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -29,7 +29,7 @@ namespace TechShop_API_backend_.Controllers.Administrator
         public async Task<List<User>> Get()
         {
             List<User> users = await _userRepository.GetAllUsersAsync();
-            return users; 
+            return users;
         }
 
         // GET api/<UserController>/5
@@ -56,7 +56,7 @@ namespace TechShop_API_backend_.Controllers.Administrator
                 return BadRequest(ModelState);
             }
 
-            var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, string.Empty,false);
+            var createdUser = await _userRepository.CreateUserAsync(newUser.Email, newUser.Username, newUser.Password, string.Empty, false);
 
 
 
@@ -70,7 +70,7 @@ namespace TechShop_API_backend_.Controllers.Administrator
         public async Task<IActionResult> Info()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            
+
 
             User? user = await _userRepository.GetUserByIdAsync(int.Parse(userId));
 
@@ -112,7 +112,7 @@ namespace TechShop_API_backend_.Controllers.Administrator
         // PUT api/<UserController>/Update/Password
         [Authorize]
         [HttpPut("Account/Update/Password")]
-        public async Task<IActionResult> Update( [FromBody] UpdateUserDto updateUserDto)  //// DONE
+        public async Task<IActionResult> Update([FromBody] UpdateUserDto updateUserDto)  //// DONE
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var userUpdate = await _userRepository.GetUserByIdAsync(int.Parse(userId));
@@ -121,18 +121,18 @@ namespace TechShop_API_backend_.Controllers.Administrator
                 return Unauthorized();
             }
             var result = SecurityHelper.CheckPasswordStrength(updateUserDto.Password);
-            if(result.IsStrong == false)
+            if (result.IsStrong == false)
             {
                 return BadRequest($"The password  is not strong enough");
             }
 
 
-            if ( SecurityHelper.HashPassword(updateUserDto.Password, userUpdate.Salt) == userUpdate.Password)
+            if (SecurityHelper.HashPassword(updateUserDto.Password, userUpdate.Salt) == userUpdate.Password)
             {
                 throw new Exception("New password must be different from the old password");
             }
 
-            
+
             await _userRepository.UpdateUserAsync(userUpdate);
             return Ok();
         }

@@ -1,5 +1,6 @@
 ﻿using System.Net.Mail;
 using System.Net;
+using TechShop_API_backend_.Data.Authenticate;
 
 namespace TechShop_API_backend_.Service
 {
@@ -14,6 +15,15 @@ namespace TechShop_API_backend_.Service
 
         private static readonly string baseUrl = Environment.GetEnvironmentVariable("BaseUrl")
         ?? throw new InvalidOperationException("Base Url environment variable is not set.");
+
+        static UserRepository _userRepository;
+
+
+        public EmailService(UserRepository userRepository)
+        {
+            _userRepository = userRepository;
+        }
+
 
 
         public static void SendOptEmail(string targetEmail, string otp)
@@ -55,7 +65,7 @@ namespace TechShop_API_backend_.Service
 
 
 
-        public static void SendVerificationEmail(string targetEmail, string verifyToken)
+        public static async Task SendVerificationEmail(string targetEmail, string verifyToken)
         {
             string subject = "Verify Your Email Address";
 
@@ -73,13 +83,17 @@ namespace TechShop_API_backend_.Service
                 // Read the HTML file
                 string htmlBody = File.ReadAllText(templatePath);
 
+                //get user name
+                var user =await _userRepository.GetUserByEmailAsync(targetEmail);
+
                 // Replace placeholders
-                string verifyUrl = $"{baseUrl}/verify?email={Uri.EscapeDataString(targetEmail)}&token={verifyToken}";
+                string verifyUrl = $"{baseUrl}/api/authenticate/verify?email={Uri.EscapeDataString(targetEmail)}&token={verifyToken}";
                 htmlBody = htmlBody.Replace("{{VERIFY_LINK}}", verifyUrl);
+                htmlBody = htmlBody.Replace("{{USERNAME}}", user.Username );
 
                 // Create and send email
                 MailMessage mail = new MailMessage();
-                mail.From = new MailAddress(serverEmail, "MyApp Verification");
+                mail.From = new MailAddress(serverEmail, "TechShop Verification");
                 mail.To.Add(targetEmail);
                 mail.Subject = subject;
                 mail.Body = htmlBody;

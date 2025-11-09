@@ -5,7 +5,7 @@ using TechShop_API_backend_.Data;
 using TechShop_API_backend_.Interfaces;
 using TechShop_API_backend_.Models;
 using TechShop_API_backend_.DTOs.Order;
-namespace TechShop_API_backend_.Controllers
+namespace TechShop_API_backend_.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -16,7 +16,7 @@ namespace TechShop_API_backend_.Controllers
         ProductRepository _productRepository;
         OrderRepository _orderRepository;
 
-        public PurchaseController(UserDetailRepository detailRepository, ProductRepository productRepository,OrderRepository orderRepository)
+        public PurchaseController(UserDetailRepository detailRepository, ProductRepository productRepository, OrderRepository orderRepository)
         {
             _detailRepository = detailRepository;
             _productRepository = productRepository;

@@ -41,28 +41,23 @@ namespace TechShop.API.Repositories
                     v.ExpiresAt > DateTime.Now);
         }
 
-
+        // Check if a verification code is used, and mark it as used if not
         public async Task<bool> IsVerifyCodeUsed(string email, string type, string code)
         {
             var verification = await _context.Set<VerificationCode>()
                 .FirstOrDefaultAsync(v =>
                     v.Email == email &&
                     v.Type == type &&
-                    v.Code == code &&
-                    !v.IsUsed &&  // Ensure the code is not used yet
-                    v.ExpiresAt > DateTime.Now); // Ensure the code hasn't expired
+                    v.Code == code);
 
             if (verification == null)
             {
-                // If no verification code is found, it means either it is expired, already used, or doesn't exist.
+                // If no verification code is found, it means it doesn't exist.
                 return false;
             }
 
-            // If verification exists and is valid (not used and not expired), mark it as used.
-            verification.IsUsed = true;
-            await _context.SaveChangesAsync();  // Save the changes to mark it as used
-
-            return true; // The code was not used before and is valid
+            // Return whether the code has already been used or not
+            return verification.IsUsed;
         }
 
 
@@ -89,7 +84,30 @@ namespace TechShop.API.Repositories
         }
 
 
+        // Delete expired codes
+        public async Task<int> DeleteExpiredAsync()
+        {
+            var expiredCodes = await _context.Set<VerificationCode>()
+                .Where(v => v.ExpiresAt <= DateTime.Now)
+                .ToListAsync();
+            _context.Set<VerificationCode>().RemoveRange(expiredCodes);
+            return await _context.SaveChangesAsync();
+        }
 
-        
+        // Delete 
+        public async Task<bool> DeleteAsync(string email, string type, string code)
+        {
+            var verification = await _context.Set<VerificationCode>()
+                .FirstOrDefaultAsync(v =>
+                    v.Email == email &&
+                    v.Type == type &&
+                    v.Code == code);
+            if (verification == null)
+                return false;
+            _context.Set<VerificationCode>().Remove(verification);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
     }
 }
