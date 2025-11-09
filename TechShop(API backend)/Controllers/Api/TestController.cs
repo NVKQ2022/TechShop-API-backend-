@@ -140,26 +140,56 @@ namespace TechShop_API_backend_.Controllers.Api
         }
 
         [AllowAnonymous]
-        [HttpPost("EmailVerify/Send}")]
-        public async Task<IActionResult> EmailVerify([FromBody] string targetEmail) //DONE
+        [HttpPost("EmailVerify/Send")]
+        public async Task<IActionResult> EmailVerify([FromBody] string targetEmail)
         {
-
-
             try
             {
+                // Step 1: Check if user exists
+                var user = await _userRepository.GetUserByEmailAsync(targetEmail);
 
-                // verified email 
+                if (user == null)
+                {
+                    return BadRequest("User not found with this email.");
+                }
+
+                // Step 2: Generate the verification token
                 var token = SecurityHelper.GenerateVerificationToken(targetEmail);
 
-                EmailService.SendVerificationEmail(targetEmail, token);
+                // Step 3: Send the verification email and get the result
+                var (isSuccess, message) = await EmailService.SendVerificationEmail(targetEmail, token);
 
-                return Ok();
+                // Step 4: Check if email was successfully sent
+                if (!isSuccess)
+                {
+                    // If sending the email failed, return the failure message
+                    return BadRequest(message);
+                }
+
+                // Step 5: Save the verification code in the database
+                var verificationCode = new VerificationCode
+                {
+                    UserId = user.Id, // User ID is available now
+                    Email = targetEmail,
+                    Code = token,
+                    Type = "EMAIL_VERIFY",
+                    ExpiresAt = DateTime.Now.AddHours(1),
+                    IsUsed = false,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _verificationCodeRepository.CreateAsync(verificationCode);
+
+                // Step 6: Return success
+                return Ok(new { Message = "Verification email sent successfully." });
             }
             catch (Exception ex)
             {
+                // Handle unexpected errors
                 return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
             }
         }
+
 
 
 

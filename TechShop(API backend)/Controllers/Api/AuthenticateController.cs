@@ -311,7 +311,7 @@ namespace TechShop_API_backend_.Controllers.Api
 
 
         [AllowAnonymous]
-        [HttpPost("EmailVerify/Resend}")]
+        [HttpPost("EmailVerify/Resend")]
         public async Task<IActionResult> EmailVerify([FromBody] string targetEmail) //DONE
         {
 
@@ -320,6 +320,7 @@ namespace TechShop_API_backend_.Controllers.Api
             {
                 // prevent spaming mail with some rate limit logic later (e.g., allow resend only once every 5 minutes)
                 var verificationCode = await  _verificationCodeRepository.GetLatestAsync(targetEmail, "EMAIL_VERIFY");
+
                 // Check if a recent code was sent (rate limiting — allow resend only every 5 minutes)
                 if (verificationCode != null && (DateTime.Now - verificationCode.CreatedAt).TotalMinutes < 5)
                 {
@@ -330,7 +331,19 @@ namespace TechShop_API_backend_.Controllers.Api
                 // verified email 
                 var token = SecurityHelper.GenerateVerificationToken(targetEmail);
 
-                EmailService.SendVerificationEmail(targetEmail, token);
+                var newVerificationCode = new VerificationCode
+                {
+                    UserId = verificationCode.UserId, // unknown at this point
+                    Email = targetEmail,
+                    Code = token,
+                    Type = "EMAIL_VERIFY",
+                    ExpiresAt = DateTime.Now.AddHours(1),
+                    IsUsed = false,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _verificationCodeRepository.CreateAsync(newVerificationCode);
+                await EmailService.SendVerificationEmail(targetEmail, token);
 
                 return Ok();
             }
@@ -345,21 +358,25 @@ namespace TechShop_API_backend_.Controllers.Api
 
 
         [AllowAnonymous]
-        [HttpGet("verify")]
+        [HttpGet("Email/verify")]
         public async Task<IActionResult> VerifyEmail([FromQuery] string email, [FromQuery] string token)
         {
             try
             {
                 var isMatched = await _verificationCodeRepository.VerifyAsync(email, "EMAIL_VERIFY", token);
                 if (isMatched)
-                { 
+                {
                     await _verificationCodeRepository.DeleteAsync(email, "EMAIL_VERIFY", token);
-                    return Ok("Verified");
+                    var user =await _userRepository.GetUserByEmailAsync(email);
+                    user.IsEmailVerified = true;
+                    await _userRepository.UpdateUserAsync(user);
+                    return Ok(new { Message = $"{user.Username} , your email ({email}) successfully verified  ." });
                 }
                 else
                 {
-                    return BadRequest("Wrong token code or email not found");
+                    return BadRequest(new { Message = "Invalid verification token or email." });
                 }
+
             }
             catch (Exception ex)
             {

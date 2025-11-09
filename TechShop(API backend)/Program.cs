@@ -20,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 
 // Add custom services
+builder.Services.AddScoped<SecurityHelper>();
 builder.Services.AddScoped<ConverterHelper>();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<JwtService>();
