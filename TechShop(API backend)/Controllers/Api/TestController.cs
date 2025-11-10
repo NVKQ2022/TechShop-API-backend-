@@ -142,7 +142,7 @@ namespace TechShop_API_backend_.Controllers.Api
         
 
         // Test: Get Verification by Email
-        [HttpGet("GetByEmail")]
+        [HttpGet("GetByEmailWithExpire")]
         public async Task<IActionResult> GetVerificationByEmailAsync([FromQuery] string email)
         {
             var verification = await _verificationCodeRepository.GetVerificationByEmailNotExpireAsync(email);
@@ -152,6 +152,18 @@ namespace TechShop_API_backend_.Controllers.Api
             }
             return Ok(verification);
         }
+
+        [HttpGet("GetByEmail")]
+        public async Task<IActionResult> GetVerificationByEmailAllAsync([FromQuery] string email)
+        {
+            var verification = await _verificationCodeRepository.GetVerificationByEmailAsync(email);
+            if (verification == null)
+            {
+                return NotFound("No verification found for the given email.");
+            }
+            return Ok(verification);
+        }
+
 
         // Test: Get Verification by Type
         [HttpGet("GetByType")]

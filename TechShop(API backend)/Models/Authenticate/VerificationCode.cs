@@ -40,7 +40,7 @@ namespace TechShop.API.Models
 
         [Required]
         [Column("CREATED_AT")]
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [Column("USED_AT")]
         public DateTime? UsedAt { get; set; }

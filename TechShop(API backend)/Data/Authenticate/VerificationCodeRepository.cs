@@ -46,7 +46,7 @@ namespace TechShop.API.Repositories
         public async Task<VerificationCode> GetVerificationByEmailNotExpireAsync(string email)
         {
             return await _context.Set<VerificationCode>()
-                .FirstOrDefaultAsync(v => v.Email == email && v.ExpiresAt > DateTime.Now);
+                .FirstOrDefaultAsync(v => v.Email == email && v.ExpiresAt > DateTime.UtcNow);
         }
 
         // Get latest unused code by email and type
@@ -57,7 +57,7 @@ namespace TechShop.API.Repositories
                     v.Email == email &&
                     v.Type == type &&
                     !v.IsUsed &&
-                    v.ExpiresAt > DateTime.Now);
+                    v.ExpiresAt > DateTime.UtcNow);
         }
 
         // Check if a verification code is used, and mark it as used if not
@@ -90,13 +90,13 @@ namespace TechShop.API.Repositories
                     v.Type == type &&
                     v.Code == code &&
                     !v.IsUsed &&
-                    v.ExpiresAt > DateTime.Now);
+                    v.ExpiresAt > DateTime.UtcNow);
 
             if (verification == null)
                 return false;
 
             verification.IsUsed = true;
-            verification.UsedAt = DateTime.Now;
+            verification.UsedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
             return true;
@@ -107,7 +107,7 @@ namespace TechShop.API.Repositories
         public async Task<int> DeleteExpiredAsync()
         {
             var expiredCodes = await _context.Set<VerificationCode>()
-                .Where(v => v.ExpiresAt <= DateTime.Now)
+                .Where(v => v.ExpiresAt <= DateTime.UtcNow)
                 .ToListAsync();
             _context.Set<VerificationCode>().RemoveRange(expiredCodes);
             return await _context.SaveChangesAsync();

@@ -40,11 +40,11 @@ namespace TechShop_API_backend_.Controllers.Api
         UserRepository _userRepository;
         VerificationCodeRepository _verificationCodeRepository;
         JwtService _jwtService;
-        EmailService emailService;
+        EmailService _emailService;
         private readonly ILogger<AuthenticateController> _logger;
         private readonly AuthProviderRepository _authProviderRepository;
         private string _googleClientId = Environment.GetEnvironmentVariable("GoogleOAuth__ClientId") ?? "";
-        public AuthenticateController(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
+        public AuthenticateController(UserRepository userRepository,EmailService emailService , VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
         {
 
             //FirebaseApp.Create(new AppOptions()
@@ -61,6 +61,7 @@ namespace TechShop_API_backend_.Controllers.Api
             _userRepository = userRepository;
             _jwtService = jwtService;
             _logger = logger;
+            _emailService = emailService;
         }
 
 
@@ -454,7 +455,7 @@ namespace TechShop_API_backend_.Controllers.Api
         public async Task<IActionResult> EmailVerify([FromBody] string targetEmail)
         {
 
-            var result = await EmailService.SendVerifyEmailProcessAsync(targetEmail);
+            var result = await _emailService.SendVerifyEmailProcessAsync(targetEmail);
             return Ok(result.Item2);
         }
 
@@ -556,7 +557,7 @@ namespace TechShop_API_backend_.Controllers.Api
 
 
         [AllowAnonymous]
-        [HttpGet("Email/Opt/Sent/ForgotPassword")]
+        [HttpPost("Email/Opt/Sent/ForgotPassword")]
         public async Task<IActionResult> EmailOPT([FromBody] string email)
         {
             try
@@ -569,7 +570,7 @@ namespace TechShop_API_backend_.Controllers.Api
 
                 var otp = SecurityHelper.GenerateOTP(6);
 
-                EmailService.SendOptEmail(user.Email, otp);
+                EmailService.SendOtpEmail(user.Email, otp);
 
                 var verificationCode = new VerificationCode
                 {
@@ -577,9 +578,9 @@ namespace TechShop_API_backend_.Controllers.Api
                     Email = user.Email,
                     Code = otp,
                     Type = "PASSWORD_RESET",
-                    ExpiresAt = DateTime.Now.AddMinutes(10),
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(10),
                     IsUsed = false,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = DateTime.UtcNow
                 };
 
                 await _verificationCodeRepository.CreateAsync(verificationCode);
