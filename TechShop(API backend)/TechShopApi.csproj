@@ -34,4 +34,10 @@
     <Folder Include="Views\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="wwwroot\Email-templates\order.html" />
+    <None Include="wwwroot\Email-templates\otp.html" />
+    <None Include="wwwroot\Email-templates\verify.html" />
+  </ItemGroup>
+
 </Project>

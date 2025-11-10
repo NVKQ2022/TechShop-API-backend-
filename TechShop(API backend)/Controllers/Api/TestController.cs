@@ -139,57 +139,43 @@ namespace TechShop_API_backend_.Controllers.Api
             return Ok();
         }
 
-        [AllowAnonymous]
-        [HttpPost("EmailVerify/Send")]
-        public async Task<IActionResult> EmailVerify([FromBody] string targetEmail)
+        
+
+        // Test: Get Verification by Email
+        [HttpGet("GetByEmail")]
+        public async Task<IActionResult> GetVerificationByEmailAsync([FromQuery] string email)
         {
-            try
+            var verification = await _verificationCodeRepository.GetVerificationByEmailNotExpireAsync(email);
+            if (verification == null)
             {
-                // Step 1: Check if user exists
-                var user = await _userRepository.GetUserByEmailAsync(targetEmail);
-
-                if (user == null)
-                {
-                    return BadRequest("User not found with this email.");
-                }
-
-                // Step 2: Generate the verification token
-                var token = SecurityHelper.GenerateVerificationToken(targetEmail);
-
-                // Step 3: Send the verification email and get the result
-                var (isSuccess, message) = await EmailService.SendVerificationEmail(targetEmail, token);
-
-                // Step 4: Check if email was successfully sent
-                if (!isSuccess)
-                {
-                    // If sending the email failed, return the failure message
-                    return BadRequest(message);
-                }
-
-                // Step 5: Save the verification code in the database
-                var verificationCode = new VerificationCode
-                {
-                    UserId = user.Id, // User ID is available now
-                    Email = targetEmail,
-                    Code = token,
-                    Type = "EMAIL_VERIFY",
-                    ExpiresAt = DateTime.Now.AddHours(1),
-                    IsUsed = false,
-                    CreatedAt = DateTime.Now
-                };
-
-                await _verificationCodeRepository.CreateAsync(verificationCode);
-
-                // Step 6: Return success
-                return Ok(new { Message = "Verification email sent successfully." });
+                return NotFound("No unexpired verification found for the given email.");
             }
-            catch (Exception ex)
-            {
-                // Handle unexpected errors
-                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
-            }
+            return Ok(verification);
         }
 
+        // Test: Get Verification by Type
+        [HttpGet("GetByType")]
+        public async Task<IActionResult> GetVerificationByTypeAsync([FromQuery] string type)
+        {
+            var verification = await _verificationCodeRepository.GetVerificationByTypeAsync(type);
+            if (verification == null)
+            {
+                return NotFound("No unexpired verification found for the given type.");
+            }
+            return Ok(verification);
+        }
+
+        // Test: Get Verification by Code
+        [HttpGet("GetByCode")]
+        public async Task<IActionResult> GetVerificationByCodeAsync([FromQuery] string code)
+        {
+            var verification = await _verificationCodeRepository.GetByCodeAsync(code);
+            if (verification == null)
+            {
+                return NotFound("No unexpired verification found for the given code.");
+            }
+            return Ok(verification);
+        }
 
 
 

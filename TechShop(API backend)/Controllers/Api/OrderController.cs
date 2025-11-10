@@ -147,7 +147,7 @@ namespace TechShop_API_backend_.Controllers.Api
         }
 
         // ✅ Delete order (admin use)
-        [HttpDelete("{orderId}")]
+        [HttpDelete("Admin/{orderId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteOrder(string orderId)
         {
@@ -158,7 +158,35 @@ namespace TechShop_API_backend_.Controllers.Api
         }
 
 
+        [HttpDelete("{orderId}")]
+        [Authorize]
+        public async Task<IActionResult> CancelOrder(string orderId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("User ID not found in token.");
 
+            // Validate user ID
+            if (!int.TryParse(userIdClaim, out int userId))
+                return BadRequest("Invalid user ID format.");
+
+            // Get the order
+            var order = await _orderRepository.GetOrderByIdAsync(orderId);
+            if (order == null)
+                return NotFound("Order not found.");
+
+            // User can only cancel their own order
+            if (order.UserID != userId)
+                return Forbid("You are not allowed to cancel this order.");
+
+            // Only allow cancellation if status is "Pending" or "NotConfirm"
+            if (order.Status != "Pending" && order.Status != "NotConfirm")
+                return BadRequest("Only pending or not confirmed orders can be cancelled.");
+            var success = await _orderRepository.CancelOrder(orderId);
+            if (!success)
+                return StatusCode(500, "Failed to cancel the order.");
+            return Ok("Order cancelled successfully.");
+        }
 
 
 

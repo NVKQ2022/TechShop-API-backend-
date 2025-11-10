@@ -30,6 +30,25 @@ namespace TechShop.API.Repositories
                 .FirstOrDefaultAsync(v => v.Code == code);
         }
 
+
+        public async Task<VerificationCode> GetVerificationByEmailAsync(string email)
+        {
+            return await _context.Set<VerificationCode>()
+                .FirstOrDefaultAsync(v => v.Email == email);
+        }
+
+        public async Task<VerificationCode> GetVerificationByTypeAsync(string type)
+        {
+            return await _context.Set<VerificationCode>()
+                .FirstOrDefaultAsync(v => v.Type == type);
+        }
+
+        public async Task<VerificationCode> GetVerificationByEmailNotExpireAsync(string email)
+        {
+            return await _context.Set<VerificationCode>()
+                .FirstOrDefaultAsync(v => v.Email == email && v.ExpiresAt > DateTime.Now);
+        }
+
         // Get latest unused code by email and type
         public async Task<VerificationCode> GetLatestAsync(string email, string type)
         {

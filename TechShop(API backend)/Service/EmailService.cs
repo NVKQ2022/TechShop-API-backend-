@@ -1,6 +1,9 @@
 ﻿using System.Net.Mail;
 using System.Net;
 using TechShop_API_backend_.Data.Authenticate;
+using TechShop.API.Models;
+using TechShop.API.Repositories;
+using TechShop_API_backend_.Helpers;
 
 namespace TechShop_API_backend_.Service
 {
@@ -17,11 +20,13 @@ namespace TechShop_API_backend_.Service
         ?? throw new InvalidOperationException("Base Url environment variable is not set.");
 
         static UserRepository _userRepository;
+        static VerificationCodeRepository _verificationCodeRepository;
 
 
-        public EmailService(UserRepository userRepository)
+        public EmailService(UserRepository userRepository, VerificationCodeRepository verificationCodeRepository )
         {
             _userRepository = userRepository;
+            _verificationCodeRepository = verificationCodeRepository;
         }
 
 
@@ -71,7 +76,8 @@ namespace TechShop_API_backend_.Service
             string message = string.Empty; // To hold the result message
 
             // Path to your HTML template (adjust if needed)
-            string templatePath = Path.GetFullPath(@"Source\Email-templates\verify.html");
+            //string templatePath = Path.GetFullPath(@"Source\Email-templates\verify.html");
+            string templatePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Email-templates", "verify.html");
 
             try
             {
@@ -138,6 +144,68 @@ namespace TechShop_API_backend_.Service
             }
         }
 
+
+
+
+
+
+
+
+        public static async Task<(bool, string)> SendVerifyEmailProcessAsync(string targetEmail)
+        {
+            try
+            {
+                // Step 1: Check if user exists
+                var user = await _userRepository.GetUserByEmailAsync(targetEmail);
+                if (user == null)
+                {
+                    return (false, "User not found with this email.");
+                }
+
+                // Optional: Rate limiting to prevent spamming (uncomment if needed)
+                // var existVerificationCode = await _verificationCodeRepository.GetLatestAsync(targetEmail, "EMAIL_VERIFY");
+                // if (existVerificationCode != null)
+                // {
+                //     var timeSinceCreation = DateTime.Now - existVerificationCode.CreatedAt;
+                //     if (timeSinceCreation.TotalMinutes < 1) // 1 minute cooldown
+                //     {
+                //         return (false, "Please wait before requesting another verification email.");
+                //     }
+                // }
+
+                // Step 2: Generate the verification token
+                var token = SecurityHelper.GenerateVerificationToken(targetEmail);
+
+                // Step 3: Send the verification email and get the result
+                var (isSuccess, message) = await SendVerificationEmail(targetEmail, token);
+                if (!isSuccess)
+                {
+                    return (false, message); // If sending the email failed, return the failure message
+                }
+
+                // Step 4: Save the verification code in the database
+                var verificationCode = new VerificationCode
+                {
+                    UserId = user.Id,
+                    Email = targetEmail,
+                    Code = token,
+                    Type = "EMAIL_VERIFY",
+                    ExpiresAt = DateTime.Now.AddHours(1),
+                    IsUsed = false,
+                    CreatedAt = DateTime.Now
+                };
+
+                await _verificationCodeRepository.CreateAsync(verificationCode);
+
+                // Step 5: Return success
+                return (true, "Verification email sent successfully.");
+            }
+            catch (Exception ex)
+            {
+                // Log the error (optional)
+                return (false, "An error occurred while processing your request. Please try again later.");
+            }
+        }
 
     }
 }

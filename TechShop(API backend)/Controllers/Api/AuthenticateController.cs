@@ -310,48 +310,48 @@ namespace TechShop_API_backend_.Controllers.Api
 
 
 
-        [AllowAnonymous]
-        [HttpPost("EmailVerify/Resend")]
-        public async Task<IActionResult> EmailVerify([FromBody] string targetEmail) //DONE
-        {
+        //[AllowAnonymous]
+        //[HttpPost("EmailVerify/Resend")]
+        //public async Task<IActionResult> EmailVerify([FromBody] string targetEmail) 
+        //{
 
 
-            try
-            {
-                // prevent spaming mail with some rate limit logic later (e.g., allow resend only once every 5 minutes)
-                var verificationCode = await  _verificationCodeRepository.GetLatestAsync(targetEmail, "EMAIL_VERIFY");
+        //    try
+        //    {
+        //        // prevent spaming mail with some rate limit logic later (e.g., allow resend only once every 5 minutes)
+        //        var verificationCode = await  _verificationCodeRepository.GetLatestAsync(targetEmail, "EMAIL_VERIFY");
 
-                // Check if a recent code was sent (rate limiting — allow resend only every 5 minutes)
-                if (verificationCode != null && (DateTime.Now - verificationCode.CreatedAt).TotalMinutes < 5)
-                {
-                    var remaining = 5 - (DateTime.Now - verificationCode.CreatedAt).TotalMinutes;
-                    return BadRequest(new { Message = $"Please wait {Math.Ceiling(remaining)} more minute(s) before requesting another verification email." });
-                }
+        //        // Check if a recent code was sent (rate limiting — allow resend only every 5 minutes)
+        //        if (verificationCode != null && (DateTime.Now - verificationCode.CreatedAt).TotalMinutes < 5)
+        //        {
+        //            var remaining = 5 - (DateTime.Now - verificationCode.CreatedAt).TotalMinutes;
+        //            return BadRequest(new { Message = $"Please wait {Math.Ceiling(remaining)} more minute(s) before requesting another verification email." });
+        //        }
 
-                // verified email 
-                var token = SecurityHelper.GenerateVerificationToken(targetEmail);
+        //        // verified email 
+        //        var token = SecurityHelper.GenerateVerificationToken(targetEmail);
 
-                var newVerificationCode = new VerificationCode
-                {
-                    UserId = verificationCode.UserId, // unknown at this point
-                    Email = targetEmail,
-                    Code = token,
-                    Type = "EMAIL_VERIFY",
-                    ExpiresAt = DateTime.Now.AddHours(1),
-                    IsUsed = false,
-                    CreatedAt = DateTime.Now
-                };
+        //        var newVerificationCode = new VerificationCode
+        //        {
+        //            UserId = verificationCode.UserId, // unknown at this point
+        //            Email = targetEmail,
+        //            Code = token,
+        //            Type = "EMAIL_VERIFY",
+        //            ExpiresAt = DateTime.Now.AddHours(1),
+        //            IsUsed = false,
+        //            CreatedAt = DateTime.Now
+        //        };
 
-                await _verificationCodeRepository.CreateAsync(newVerificationCode);
-                await EmailService.SendVerificationEmail(targetEmail, token);
+        //        await _verificationCodeRepository.CreateAsync(newVerificationCode);
+        //        await EmailService.SendVerificationEmail(targetEmail, token);
 
-                return Ok();
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
-            }
-        }
+        //        return Ok();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { Message = "An error occurred while processing your request. Please try again later." });
+        //    }
+        //}
 
        
 
@@ -363,7 +363,7 @@ namespace TechShop_API_backend_.Controllers.Api
         {
             try
             {
-                var isMatched = await _verificationCodeRepository.VerifyAsync(email, "EMAIL_VERIFY", token);
+                var isMatched = await _verificationCodeRepository.VerifyAsync(email,"EMAIL_VERIFY", token);
                 if (isMatched)
                 {
                     await _verificationCodeRepository.DeleteAsync(email, "EMAIL_VERIFY", token);
@@ -388,7 +388,7 @@ namespace TechShop_API_backend_.Controllers.Api
             // POST api/<AuthenticateController>
 
 
-            [AllowAnonymous]
+        [AllowAnonymous]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] CreateUserDto newUser) //DONE
         {
@@ -436,22 +436,6 @@ namespace TechShop_API_backend_.Controllers.Api
                 //});
 
 
-
-                // verified email 
-                var verificationCode = new VerificationCode
-                {
-                    UserId = createdUser.CreatedUser.Id,
-                    Code = SecurityHelper.GenerateVerificationToken(newUser.Email),
-                    Email = newUser.Email,
-                    Type = "EMAIL_VERIFY",
-                    ExpiresAt = DateTime.Now.AddHours(24),
-                    IsUsed = false,
-                    CreatedAt = DateTime.Now
-
-                };
-
-                await _verificationCodeRepository.CreateAsync(verificationCode);
-
                 // 5. Return CreatedAtAction for the login endpoint to indicate successful creation
                 return Ok("please verify your email then login again"); // Respond with status 201 Created
             }
@@ -465,7 +449,14 @@ namespace TechShop_API_backend_.Controllers.Api
 
 
 
+        [AllowAnonymous]
+        [HttpPost("EmailVerify/Send")]
+        public async Task<IActionResult> EmailVerify([FromBody] string targetEmail)
+        {
 
+            var result = await EmailService.SendVerifyEmailProcessAsync(targetEmail);
+            return Ok(result.Item2);
+        }
 
 
         [Authorize]

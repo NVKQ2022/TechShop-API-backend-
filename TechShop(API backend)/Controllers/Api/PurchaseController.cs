@@ -86,7 +86,7 @@ namespace TechShop_API_backend_.Controllers.Api
             }
 
             // 3. Update order status to 'Confirmed'
-            order.Status = "Confirmed";  // Change status to Confirmed
+            order.Status = "Pending";  // Change status to Confirmed
             order.CreatedAt = DateTime.UtcNow; // Add confirmation timestamp
 
             // 4. Save the updated order
