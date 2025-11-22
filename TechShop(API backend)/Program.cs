@@ -33,6 +33,7 @@ builder.Services.AddScoped<VerificationCodeRepository>();
 builder.Services.AddScoped<AuthProviderRepository>();    
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<ImageService>();
+builder.Services.AddScoped<AdminRepository>();
 // Add service configurations
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
