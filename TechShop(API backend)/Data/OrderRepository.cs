@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using TechShop_API_backend_.DTOs.Order;
-using TechShop_API_backend_.Interfaces;
 using TechShop_API_backend_.Models;
 
 namespace TechShop_API_backend_.Data
@@ -33,7 +30,7 @@ namespace TechShop_API_backend_.Data
         public async Task<Order> GetOrderByIdAsync(string id)
         {
             return await _orders.Find(o => o.OrderID == id).FirstOrDefaultAsync();
-         
+
         }
 
         public async Task<List<Order>> GetOrdersByUserAsync(int userId)
@@ -71,7 +68,7 @@ namespace TechShop_API_backend_.Data
 
 
 
-        public async Task<bool> UpdateOrderAsync( Order updatedOrder)
+        public async Task<bool> UpdateOrderAsync(Order updatedOrder)
         {
             var filter = Builders<Order>.Filter.Eq(o => o.OrderID, updatedOrder.OrderID);
             var update = Builders<Order>.Update
@@ -99,6 +96,23 @@ namespace TechShop_API_backend_.Data
             var result = await _orders.DeleteOneAsync(o => o.OrderID == id);
             return result.IsAcknowledged && result.DeletedCount > 0;
         }
+
+        public async Task<long> DeleteManyOrdersAsync(IEnumerable<string> orderIds)
+        {
+            if (orderIds == null)
+                return 0;
+
+            var ids = orderIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return 0;
+
+            var filter = Builders<Order>.Filter.In(o => o.OrderID, ids);
+
+            var result = await _orders.DeleteManyAsync(filter);
+
+            return result.DeletedCount;
+        }
+
 
     }
 }

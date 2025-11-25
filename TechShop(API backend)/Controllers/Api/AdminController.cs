@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TechShop_API_backend_.Data;
 using TechShop_API_backend_.DTOs.Admin;
+using TechShop_API_backend_.Service;
 
 namespace TechShop_API_backend_.Controllers.Api
 {
@@ -11,10 +12,12 @@ namespace TechShop_API_backend_.Controllers.Api
     public class AdminController : ControllerBase
     {
         private readonly AdminRepository _adminRepository;
+        private readonly MongoMetricsService _mongoMetricsService;
 
-        public AdminController(AdminRepository adminRepository)
+        public AdminController(AdminRepository adminRepository, MongoMetricsService mongoMetricsService)
         {
             _adminRepository = adminRepository;
+            _mongoMetricsService = mongoMetricsService;
         }
 
         [HttpGet("total-users")]
@@ -63,5 +66,33 @@ namespace TechShop_API_backend_.Controllers.Api
             });
         }
 
+        [HttpGet("overview")]
+        public async Task<IActionResult> GetOverview()
+        {
+            var overview = await _mongoMetricsService.GetOverviewAsync();
+            return Ok(overview);
+        }
+
+        // collStats từng collection
+        [HttpGet("collection/{name}")]
+        public async Task<IActionResult> GetCollectionStats(string name)
+        {
+            var stats = await _mongoMetricsService.GetCollectionStatsAsync(name);
+            return Ok(stats);
+        }
+
+        [HttpGet("server")]
+        public async Task<IActionResult> GetServerMetrics()
+        {
+            var metrics = await _mongoMetricsService.GetServerMetricsAsync();
+            return Ok(metrics);
+        }
+
+        [HttpGet("collection/{name}/indexes")]
+        public async Task<IActionResult> GetCollectionIndexStats(string name)
+        {
+            var stats = await _mongoMetricsService.GetIndexStatsForCollectionAsync(name);
+            return Ok(stats);
+        }
     }
 }
