@@ -5,6 +5,7 @@ using MongoDB.Driver;
 using TechShop_API_backend_.Data.Context;
 using TechShop_API_backend_.DTOs.Admin;
 using TechShop_API_backend_.Models;
+using TechShop_API_backend_.Models.Authenticate;
 
 namespace TechShop_API_backend_.Data
 {
@@ -14,8 +15,10 @@ namespace TechShop_API_backend_.Data
         private readonly IMongoCollection<Order> _order;
         private readonly OrderRepository _orderRepository;
         private readonly ProductRepository _productRepository;
+        private readonly UserDetailRepository _userDetailRepository;
 
-        public AdminRepository(AuthenticateDbContext context, IOptions<MongoDbSettings> settings, OrderRepository orderRepository, ProductRepository productRepository)
+        public AdminRepository(AuthenticateDbContext context, IOptions<MongoDbSettings> settings, OrderRepository orderRepository, ProductRepository productRepository,
+                                UserDetailRepository userDetailRepository)
         {
             _context = context;
             var client = new MongoClient(settings.Value.ConnectionString);
@@ -23,6 +26,7 @@ namespace TechShop_API_backend_.Data
             _order = database.GetCollection<Order>(settings.Value.OrderCollectionName);
             _orderRepository = orderRepository;
             _productRepository = productRepository;
+            _userDetailRepository = userDetailRepository;
         }
 
         public async Task<int> GetTotalUsersAsync()
@@ -114,6 +118,166 @@ namespace TechShop_API_backend_.Data
         public async Task<long> GetOrdersCountAsync()
         {
             return await _order.CountDocumentsAsync(Builders<Order>.Filter.Empty);
+        }
+
+        public async Task<List<User>> GetUsersPagedAsync(int page, int pageSize, string? keyword = null)
+        {
+            if (page <= 0) page = 1;
+            if (pageSize <= 0) pageSize = 12;
+
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                keyword = keyword.Trim();
+                query = query.Where(u =>
+                    u.Email.Contains(keyword) ||
+                    u.Username.Contains(keyword));
+            }
+
+            var skip = (page - 1) * pageSize;
+
+            return await query
+                .OrderBy(u => u.Id)
+                .Skip(skip)
+                .Take(pageSize)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetUsersCountAsync(string? keyword = null)
+        {
+            var query = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                keyword = keyword.Trim();
+                query = query.Where(u =>
+                    u.Email.Contains(keyword) ||
+                    u.Username.Contains(keyword));
+            }
+
+            return await query.CountAsync();
+        }
+
+        public async Task<AdminUserOverviewDto?> GetUserOverviewAsync(int userId)
+        {
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return null;
+
+            var detail = await _userDetailRepository.GetUserDetailAsync(userId);
+
+            var orders = await _orderRepository.GetOrdersByUserAsync(userId);
+
+            var totalOrders = orders.Count;
+
+            int notConfirmOrders = orders.Count(o => o.Status == "NotConfirm");
+            int pendingOrders = orders.Count(o => o.Status == "Pending");
+            int confirmedOrders = orders.Count(o => o.Status == "Confirmed");
+            int processingOrders = orders.Count(o => o.Status == "Processing");
+            int shippedOrders = orders.Count(o => o.Status == "Shipped");
+            int deliveredOrders = orders.Count(o => o.Status == "Delivered");
+            int cancelledOrders = orders.Count(o => o.Status == "Cancelled");
+
+
+            int totalSpent = orders
+                .Where(o => o.Status == "Delivered")
+                .Sum(o => o.TotalAmount);
+
+            DateTime? firstOrderAt = null;
+            DateTime? lastOrderAt = null;
+
+            if (orders.Any())
+            {
+                firstOrderAt = orders.Min(o => o.CreatedAt);
+                lastOrderAt = orders.Max(o => o.CreatedAt);
+            }
+
+            var dto = new AdminUserOverviewDto
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Username = user.Username,
+                IsAdmin = user.IsAdmin,
+                IsEmailVerified = user.IsEmailVerified,
+
+                Name = detail?.Name,
+                Avatar = detail?.Avatar,
+                PhoneNumber = detail?.PhoneNumber,
+                Gender = detail?.Gender,
+
+                Birthday = (detail == null || detail.Birthday == default)
+                    ? null
+                    : detail.Birthday,
+
+                CartItemCount = detail?.Cart?.Count ?? 0,
+                WishlistCount = detail?.Wishlist?.Count ?? 0,
+
+                TotalOrders = totalOrders,
+                NotConfirmOrders = notConfirmOrders,
+                PendingOrders = pendingOrders,
+                ConfirmedOrders = confirmedOrders,
+                ProcessingOrders = processingOrders,
+                ShippedOrders = shippedOrders,
+                DeliveredOrders = deliveredOrders,
+                CancelledOrders = cancelledOrders,
+
+                TotalSpent = totalSpent,
+                FirstOrderAt = firstOrderAt,
+                LastOrderAt = lastOrderAt
+            };
+
+            return dto;
+        }
+
+        public async Task<bool> UpdateUserRoleAsync(int userId, bool isAdmin)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return false;
+
+            user.IsAdmin = isAdmin;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> DeleteUserByAdminAsync(int userId)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return false;
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            await _userDetailRepository.DeleteUserDetailAsync(userId);
+            // await _orderRepository.DeleteOrdersByUserIdAsync(userId);
+
+            return true;
+        }
+
+        public async Task<int> DeleteManyUsersAsync(IEnumerable<int> userIds)
+        {
+            if (userIds == null)
+                return 0;
+
+            var ids = userIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return 0;
+
+            var users = await _context.Users
+                .Where(u => ids.Contains(u.Id))
+                .ToListAsync();
+
+            if (users.Count == 0)
+                return 0;
+
+            _context.Users.RemoveRange(users);
+            await _context.SaveChangesAsync();
+
+            var deleteDetailTasks = ids
+                .Select(id => _userDetailRepository.DeleteUserDetailAsync(id));
+            await Task.WhenAll(deleteDetailTasks);
+
+            return users.Count;
         }
 
 
