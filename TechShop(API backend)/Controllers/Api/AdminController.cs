@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TechShop_API_backend_.Data;
 using TechShop_API_backend_.DTOs.Admin;
+using TechShop_API_backend_.Models;
 using TechShop_API_backend_.Service;
 
 namespace TechShop_API_backend_.Controllers.Api
@@ -173,6 +174,183 @@ namespace TechShop_API_backend_.Controllers.Api
                 requested = userIds.Count,
                 deleted = deletedCount
             });
+        }
+
+        [HttpGet("products")]
+        public async Task<IActionResult> GetProducts(
+    [FromQuery] int page = 1,
+    [FromQuery] int pageSize = 12,
+    [FromQuery] string? keyword = null,
+    [FromQuery] string? category = null)
+        {
+            var products = await _adminRepository.GetProductsPagedAsync(page, pageSize, keyword, category);
+            var totalCount = await _adminRepository.GetProductsCountAsync(keyword, category);
+
+            // Tính rating average ngay ở đây cho gọn
+            double CalcAvgRating(Product p)
+            {
+                if (p.Rating == null || p.Rating.Count == 0) return 0;
+
+                int r1 = p.Rating.ContainsKey("rate_1") ? p.Rating["rate_1"] : 0;
+                int r2 = p.Rating.ContainsKey("rate_2") ? p.Rating["rate_2"] : 0;
+                int r3 = p.Rating.ContainsKey("rate_3") ? p.Rating["rate_3"] : 0;
+                int r4 = p.Rating.ContainsKey("rate_4") ? p.Rating["rate_4"] : 0;
+                int r5 = p.Rating.ContainsKey("rate_5") ? p.Rating["rate_5"] : 0;
+
+                var totalVotes = r1 + r2 + r3 + r4 + r5;
+                if (totalVotes == 0) return 0;
+
+                var sum = 1 * r1 + 2 * r2 + 3 * r3 + 4 * r4 + 5 * r5;
+                return Math.Round((double)sum / totalVotes, 1);
+            }
+
+            var data = products.Select(p => new AdminProductListItemDto
+            {
+                ProductId = p.ProductId,
+                Name = p.Name,
+                Category = p.Category,
+                Price = p.Price,
+                Stock = p.Stock,
+                Sold = p.Sold,
+                RatingAverage = CalcAvgRating(p),
+                IsOnSale = p.Sale != null && p.Sale.IsActive,
+                SalePercent = p.Sale != null && p.Sale.IsActive ? p.Sale.Percent : (double?)null,
+                ImageURL = p.ImageURL ?? new List<string>()        // 👈 THÊM
+            }).ToList();
+
+
+            return Ok(new
+            {
+                page,
+                pageSize,
+                totalCount,
+                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                data
+            });
+        }
+
+        [HttpGet("products/{id}/overview")]
+        public async Task<IActionResult> GetProductOverview(string id)
+        {
+            var overview = await _adminRepository.GetProductOverviewAsync(id);
+            if (overview == null) return NotFound(new { message = "Product not found." });
+
+            return Ok(overview);
+        }
+
+        [HttpGet("products/statistics")]
+        public async Task<IActionResult> GetProductStats()
+        {
+            var stats = await _adminRepository.GetProductStatsAsync();
+            return Ok(stats);
+        }
+
+        [HttpDelete("products/{id}")]
+        public async Task<IActionResult> DeleteProductByAdmin(string id)
+        {
+            var success = await _adminRepository.DeleteProductAsync(id);
+            if (!success)
+                return NotFound(new { message = "Product not found." });
+
+            return Ok(new { message = "Product deleted successfully." });
+        }
+
+        [HttpDelete("products")]
+        public async Task<IActionResult> DeleteManyProducts([FromBody] List<string> productIds)
+        {
+            if (productIds == null || productIds.Count == 0)
+                return BadRequest("No product IDs provided.");
+
+            var deletedCount = await _adminRepository.DeleteManyProductsAsync(productIds);
+
+            if (deletedCount == 0)
+                return NotFound("No products were deleted. Check if the provided IDs are correct.");
+
+            return Ok(new
+            {
+                message = "Products deleted successfully.",
+                requested = productIds.Count,
+                deleted = deletedCount
+            });
+        }
+
+        [HttpPut("products/{id}/sale")]
+        public async Task<IActionResult> UpdateProductSale(string id, [FromBody] UpdateProductSaleDto dto)
+        {
+            if (dto == null)
+                return BadRequest("Sale info is required.");
+
+            if (dto.Percent < 0 || dto.Percent > 1)
+                return BadRequest("Percent should be between 0 and 1 (e.g. 0.2 for 20%).");
+
+            if (dto.EndDate <= dto.StartDate)
+                return BadRequest("EndDate must be greater than StartDate.");
+
+            var saleInfo = new SaleInfo
+            {
+                Percent = dto.Percent,
+                StartDate = dto.StartDate,
+                EndDate = dto.EndDate,
+                IsActive = dto.IsActive
+            };
+
+            var success = await _adminRepository.UpdateProductSaleAsync(id, saleInfo);
+            if (!success)
+                return NotFound(new { message = "Product not found." });
+
+            return Ok(new { message = "Sale updated successfully." });
+        }
+
+        [HttpGet("products/active-sales")]
+        public async Task<IActionResult> GetActiveSaleProducts()
+        {
+            var products = await _adminRepository.GetActiveSaleProductsAsync();
+            return Ok(products);
+        }
+
+        [HttpPost("products/random-sales")]
+        public async Task<IActionResult> ApplyRandomSales([FromQuery] int numberOfProducts = 5)
+        {
+            if (numberOfProducts <= 0)
+                return BadRequest("numberOfProducts must be greater than 0.");
+
+            await _adminRepository.ApplyRandomSalesToProductsAsync(numberOfProducts);
+
+            return Ok(new { message = $"Random sales applied to up to {numberOfProducts} products." });
+        }
+
+        [HttpPost("products")]
+        public async Task<IActionResult> CreateProduct([FromBody] CreateProductDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var product = await _adminRepository.CreateProductAsync(dto);
+
+            return CreatedAtAction(
+                nameof(GetProductOverview),
+                new { id = product.ProductId },
+                product
+            );
+        }
+
+        [HttpPut("products/{id}")]
+        public async Task<IActionResult> UpdateProduct(string id, [FromBody] UpdateProductDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var product = await _adminRepository.UpdateProductAsync(id, dto);
+            if (product == null)
+            {
+                return NotFound(new { message = "Product not found." });
+            }
+
+            return Ok(product);
         }
 
     }
