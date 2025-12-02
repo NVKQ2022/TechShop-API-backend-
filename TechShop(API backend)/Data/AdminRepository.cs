@@ -16,6 +16,7 @@ namespace TechShop_API_backend_.Data
         private readonly OrderRepository _orderRepository;
         private readonly ProductRepository _productRepository;
         private readonly UserDetailRepository _userDetailRepository;
+        private readonly IMongoCollection<ProductSaleEvent> _saleEvents;
 
         public AdminRepository(AuthenticateDbContext context, IOptions<MongoDbSettings> settings, OrderRepository orderRepository, ProductRepository productRepository,
                                 UserDetailRepository userDetailRepository)
@@ -24,6 +25,7 @@ namespace TechShop_API_backend_.Data
             var client = new MongoClient(settings.Value.ConnectionString);
             var database = client.GetDatabase(settings.Value.DatabaseName);
             _order = database.GetCollection<Order>(settings.Value.OrderCollectionName);
+            _saleEvents = database.GetCollection<ProductSaleEvent>(settings.Value.ProductSaleEventCollectionName);
             _orderRepository = orderRepository;
             _productRepository = productRepository;
             _userDetailRepository = userDetailRepository;
@@ -555,7 +557,80 @@ namespace TechShop_API_backend_.Data
             await _productRepository.UpdateAsync(productId, existing);
             return existing;
         }
+        // GET: all sale events -> DTO
+        public async Task<List<AdminSaleEventDto>> GetAllSaleEventsAsync()
+        {
+            var events = await _saleEvents
+                .Find(Builders<ProductSaleEvent>.Filter.Empty)
+                .SortBy(e => e.StartDate)
+                .ToListAsync();
 
+            return events.Select(e => new AdminSaleEventDto
+            {
+                Id = e.Id,
+                Title = e.Title,
+                Color = e.Color,
+                StartDate = e.StartDate,
+                EndDate = e.EndDate,
+                Percent = e.Percent,
+                ProductIds = e.ProductIds ?? new List<string>()
+            }).ToList();
+        }
+
+        // CREATE: nhận CreateAdminSaleEventDto, map sang entity, trả DTO trả về
+        public async Task<AdminSaleEventDto> CreateSaleEventAsync(CreateAdminSaleEventDto dto)
+        {
+            var evt = new ProductSaleEvent
+            {
+                Title = dto.Title,
+                Color = dto.Color,
+                StartDate = dto.StartDate.ToUniversalTime(),
+                EndDate = dto.EndDate.ToUniversalTime(),
+                Percent = dto.Percent,      // đã là 0–1
+                ProductIds = dto.ProductIds ?? new List<string>()
+            };
+
+            await _saleEvents.InsertOneAsync(evt);
+
+            return new AdminSaleEventDto
+            {
+                Id = evt.Id,
+                Title = evt.Title,
+                Color = evt.Color,
+                StartDate = evt.StartDate,
+                EndDate = evt.EndDate,
+                Percent = evt.Percent,
+                ProductIds = evt.ProductIds
+            };
+        }
+
+        // UPDATE: nhận UpdateAdminSaleEventDto, update các field
+        public async Task<bool> UpdateSaleEventAsync(string id, UpdateAdminSaleEventDto dto)
+        {
+            var filter = Builders<ProductSaleEvent>.Filter.Eq(e => e.Id, id);
+
+            var update = Builders<ProductSaleEvent>.Update
+                .Set(e => e.Title, dto.Title)
+                .Set(e => e.Color, dto.Color)
+                .Set(e => e.StartDate, dto.StartDate.ToUniversalTime())
+                .Set(e => e.EndDate, dto.EndDate.ToUniversalTime())
+                .Set(e => e.Percent, dto.Percent) // 0–1
+                .Set(e => e.ProductIds, dto.ProductIds ?? new List<string>());
+
+            var result = await _saleEvents.UpdateOneAsync(filter, update);
+            return result.ModifiedCount > 0;
+        }
+
+        // DELETE: có thể giữ nguyên (chỉ làm việc với entity)
+        public async Task<long> DeleteSaleEventsAsync(IEnumerable<string> ids)
+        {
+            var distinctIds = ids?.Distinct().ToList() ?? new();
+            if (distinctIds.Count == 0) return 0;
+
+            var filter = Builders<ProductSaleEvent>.Filter.In(e => e.Id, distinctIds);
+            var result = await _saleEvents.DeleteManyAsync(filter);
+            return result.DeletedCount;
+        }
 
 
         //HELPERS

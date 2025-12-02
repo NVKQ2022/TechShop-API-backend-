@@ -13,6 +13,7 @@
 
         public string UserDetailCollectionName { get; set; }
 
+        public string ProductSaleEventCollectionName { get; set; } = null!;
 
     }
 }
