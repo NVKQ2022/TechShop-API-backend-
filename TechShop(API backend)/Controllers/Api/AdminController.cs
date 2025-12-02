@@ -353,5 +353,69 @@ namespace TechShop_API_backend_.Controllers.Api
             return Ok(product);
         }
 
+        [HttpGet("sales-events")]
+        public async Task<IActionResult> GetSaleEvents()
+        {
+            var events = await _adminRepository.GetAllSaleEventsAsync();
+            return Ok(events); // List<AdminSaleEventDto>
+        }
+
+        [HttpPost("sales-events")]
+        public async Task<IActionResult> CreateSaleEvent([FromBody] CreateAdminSaleEventDto dto)
+        {
+            if (dto == null)
+                return BadRequest("Invalid sale event data.");
+
+            if (dto.StartDate == default || dto.EndDate == default)
+                return BadRequest("StartDate and EndDate are required.");
+
+            if (dto.EndDate < dto.StartDate)
+                return BadRequest("EndDate must be after StartDate.");
+
+            if (dto.Percent < 0 || dto.Percent > 1)
+                return BadRequest("Percent must be between 0 and 1.");
+
+            var created = await _adminRepository.CreateSaleEventAsync(dto);
+            return Ok(created); // AdminSaleEventDto
+        }
+
+        [HttpPut("sales-events/{id}")]
+        public async Task<IActionResult> UpdateSaleEvent(string id, [FromBody] UpdateAdminSaleEventDto dto)
+        {
+            if (dto == null)
+                return BadRequest("Invalid sale event data.");
+
+            if (dto.StartDate == default || dto.EndDate == default)
+                return BadRequest("StartDate and EndDate are required.");
+
+            if (dto.EndDate < dto.StartDate)
+                return BadRequest("EndDate must be after StartDate.");
+
+            if (dto.Percent < 0 || dto.Percent > 1)
+                return BadRequest("Percent must be between 0 and 1.");
+
+            var success = await _adminRepository.UpdateSaleEventAsync(id, dto);
+            if (!success) return NotFound("Sale event not found.");
+
+            return Ok();
+        }
+
+        [HttpDelete("sales-events")]
+        public async Task<IActionResult> DeleteSaleEvents([FromBody] List<string> ids)
+        {
+            if (ids == null || ids.Count == 0)
+                return BadRequest("No ids provided.");
+
+            var deleted = await _adminRepository.DeleteSaleEventsAsync(ids);
+
+            return Ok(new
+            {
+                requested = ids.Count,
+                deleted
+            });
+        }
+
+
+
     }
 }
