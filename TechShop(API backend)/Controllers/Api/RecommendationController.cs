@@ -72,7 +72,7 @@ namespace TechShop_API_backend_.Controllers.Api
         // ----------------------------------------------------
         [AllowAnonymous]
         [HttpPost("rebuild")]
-        public IActionResult RebuildMatrix()
+        public static IActionResult RebuildMatrix()
         {
             RecommendationService.RefreshMatrix();
             return Ok(new { message = "Matrix rebuilt successfully" });
