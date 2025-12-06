@@ -15,5 +15,6 @@
 
         public string ProductSaleEventCollectionName { get; set; } = null!;
 
+        public string NotificationCollectionName { get; set; }
     }
 }

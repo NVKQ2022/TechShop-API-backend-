@@ -103,6 +103,9 @@ namespace TechShop_API_backend_.Controllers.Api
             // 4. Save the updated order
             await _orderRepository.UpdateOrderAsync(order);
 
+            // 5. Send notification or receipt if needed
+            
+
             // Optionally, you can trigger other actions such as notifying the user or sending a receipt
 
             return Ok(new { message = "Order confirmed successfully.", order });

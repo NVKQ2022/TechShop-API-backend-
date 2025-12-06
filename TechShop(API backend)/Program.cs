@@ -39,6 +39,7 @@ builder.Services.AddScoped<ImageService>();
 builder.Services.AddScoped<AdminRepository>();
 builder.Services.AddScoped<MongoMetricsService>();
 builder.Services.AddScoped<UserFcmRepository>();
+builder.Services.AddScoped<NotificationRepository>();
 builder.Services.AddScoped<FcmService>();
 builder.Services.AddSingleton<RecommendationService>();
 
