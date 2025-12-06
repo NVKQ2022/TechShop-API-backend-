@@ -28,9 +28,9 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<AuthenticationRepository>();
 builder.Services.AddScoped<UserDetailRepository>();
-builder.Services.AddScoped<ProductRepository>();
+builder.Services.AddSingleton<ProductRepository>();
 builder.Services.AddScoped<ReviewRepository>();
-builder.Services.AddScoped<OrderRepository>();
+builder.Services.AddSingleton<OrderRepository>();
 builder.Services.AddScoped<VerificationCodeRepository>();
 builder.Services.AddScoped<AuthProviderRepository>();
 builder.Services.AddScoped<EmailService>();
@@ -40,6 +40,7 @@ builder.Services.AddScoped<AdminRepository>();
 builder.Services.AddScoped<MongoMetricsService>();
 builder.Services.AddScoped<UserFcmRepository>();
 builder.Services.AddScoped<FcmService>();
+builder.Services.AddSingleton<RecommendationService>();
 
 // Add service configurations
 builder.Services.Configure<MongoDbSettings>(
@@ -139,6 +140,12 @@ builder.Services.AddRateLimiter(options =>
 
 
 var app = builder.Build();
+//using (var scope = app.Services.CreateScope())
+//{
+//    var rec = scope.ServiceProvider.GetRequiredService<RecommendationService>();
+//    await RecommendationService.BuildMatrix();
+//    Console.WriteLine("🔥 Matrix built at startup");
+//}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

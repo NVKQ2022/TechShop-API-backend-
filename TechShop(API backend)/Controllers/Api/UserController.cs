@@ -7,6 +7,7 @@ using TechShop_API_backend_.DTOs.User;
 using TechShop_API_backend_.Helpers;
 using TechShop_API_backend_.Models.Authenticate;
 using TechShop_API_backend_.Data.Authenticate;
+using TechShop_API_backend_.DTOs;
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace TechShop_API_backend_.Controllers.Api
@@ -107,6 +108,60 @@ namespace TechShop_API_backend_.Controllers.Api
             }
             return Ok("Receive info updated successfully.");
         }
+
+
+        [Authorize]
+        [HttpDelete("Info/Profile/Delete-receive-info")]
+        public async Task<IActionResult> DeleteReceiveInfo([FromBody] ReceiveInfo receiveInfo) { 
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userDetails = await _userDetailRepository.GetUserDetailAsync(int.Parse(userId));
+            if (userDetails == null)
+            {
+                return NotFound();
+            }
+            var infoToRemove = userDetails.ReceiveInfo.FirstOrDefault(info => 
+                info.Name == receiveInfo.Name && 
+                info.Phone == receiveInfo.Phone && 
+                info.Address == receiveInfo.Address);
+            if (infoToRemove == null)
+            {
+                return NotFound("Receive info not found.");
+            }
+            userDetails.ReceiveInfo.Remove(infoToRemove);
+            var updateResult = await _userDetailRepository.UpdateUserDetailAsync(int.Parse(userId), userDetails);
+            if (!updateResult)
+            {
+                return BadRequest("Failed to update receive info.");
+            }
+            return Ok("Receive info deleted successfully.");
+        }
+
+        [Authorize]
+        [HttpPut("Info/Profile/add-personal-info")]
+        public async Task<IActionResult> AddPersonalInfo([FromBody] PersonalInfoRequest personalInfo)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userDetails = await _userDetailRepository.GetUserDetailAsync(int.Parse(userId));
+            if (userDetails == null)
+            {
+                return NotFound();
+            }
+            userDetails.Name = personalInfo.Name;
+            userDetails.Gender = personalInfo.Gender;
+            userDetails.Avatar = personalInfo.Avatar;
+            userDetails.PhoneNumber = personalInfo.PhoneNumber;
+            userDetails.Birthday = personalInfo.Birthday;
+
+            var updateResult = await _userDetailRepository.UpdateUserDetailAsync(int.Parse(userId), userDetails);
+            if (!updateResult)
+            {
+                return BadRequest("Failed to update personal info.");
+            }
+            return Ok("Personal info update successful");
+        }
+
+
+
 
         // GET api/<UserController>/Info/Details
         [Authorize]
