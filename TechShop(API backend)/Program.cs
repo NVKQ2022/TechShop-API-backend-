@@ -32,10 +32,12 @@ builder.Services.AddScoped<ProductRepository>();
 builder.Services.AddScoped<ReviewRepository>();
 builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<VerificationCodeRepository>();
-builder.Services.AddScoped<AuthProviderRepository>();    
+builder.Services.AddScoped<AuthProviderRepository>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<ImageService>();
+builder.Services.AddScoped<AdminRepository>();
+builder.Services.AddScoped<MongoMetricsService>();
 builder.Services.AddScoped<UserFcmRepository>();
 builder.Services.AddScoped<FcmService>();
 
@@ -61,8 +63,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowAll", policy =>
     {
         policy
-            .AllowAnyOrigin()   
-            .AllowAnyMethod()  
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
             .AllowAnyHeader();
     });
 });
@@ -74,20 +76,20 @@ builder.Services.AddAuthentication(options =>
     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 }).AddJwtBearer(option =>
 {
-option.SaveToken = true;
-option.RequireHttpsMetadata = false;
-option.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
-{
-    ValidAudience = builder.Configuration["JwtConfig:Audience"],
-    ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
-    IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"])),
-    
-    ValidateIssuerSigningKey = true,
-    ValidateLifetime = true,
-    ValidateIssuer = true,
-    ValidateAudience = true,
+    option.SaveToken = true;
+    option.RequireHttpsMetadata = false;
+    option.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+    {
+        ValidAudience = builder.Configuration["JwtConfig:Audience"],
+        ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
+        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"])),
 
-};
+        ValidateIssuerSigningKey = true,
+        ValidateLifetime = true,
+        ValidateIssuer = true,
+        ValidateAudience = true,
+
+    };
 });
 
 
@@ -141,7 +143,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    
+
 }
 app.UseCors("AllowAll");
 app.UseSwagger();

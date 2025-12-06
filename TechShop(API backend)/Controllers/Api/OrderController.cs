@@ -188,6 +188,25 @@ namespace TechShop_API_backend_.Controllers.Api
             return Ok("Order cancelled successfully.");
         }
 
+        [HttpDelete("Admin/orders")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteManyOrders([FromBody] List<string> orderIds)
+        {
+            if (orderIds == null || orderIds.Count == 0)
+                return BadRequest("No order IDs provided.");
+
+            var deletedCount = await _orderRepository.DeleteManyOrdersAsync(orderIds);
+
+            if (deletedCount == 0)
+                return NotFound("No orders were deleted. Check if the provided IDs are correct.");
+
+            return Ok(new
+            {
+                message = "Orders deleted successfully.",
+                requested = orderIds.Count,
+                deleted = deletedCount
+            });
+        }
 
 
         //need to review this update order method
