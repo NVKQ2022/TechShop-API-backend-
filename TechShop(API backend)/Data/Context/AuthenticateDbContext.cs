@@ -20,7 +20,11 @@ namespace TechShop_API_backend_.Data.Context
 
         public DbSet<VerificationCode> VerificationCodes { get; set; }
 
+        public DbSet<UserFcm> UserFcm { get; set; }
+
+
         public AuthenticateDbContext(DbContextOptions<AuthenticateDbContext> options) : base(options) { }
+
     }
 
 }

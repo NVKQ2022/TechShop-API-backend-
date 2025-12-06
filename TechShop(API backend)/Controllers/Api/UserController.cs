@@ -89,6 +89,24 @@ namespace TechShop_API_backend_.Controllers.Api
         }
 
 
+        [Authorize]
+        [HttpPost("Info/Profile/Add-receive-info")]
+        public async Task<IActionResult> AddReceiveInfo([FromBody] ReceiveInfo receiveInfo)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userDetails = await _userDetailRepository.GetUserDetailAsync(int.Parse(userId));
+            if (userDetails == null)
+            {
+                return NotFound();
+            }
+            userDetails.ReceiveInfo.Add(receiveInfo);
+            var updateResult = await _userDetailRepository.UpdateUserDetailAsync(int.Parse(userId), userDetails);
+            if (!updateResult)
+            {
+                return BadRequest("Failed to update receive info.");
+            }
+            return Ok("Receive info updated successfully.");
+        }
 
         // GET api/<UserController>/Info/Details
         [Authorize]

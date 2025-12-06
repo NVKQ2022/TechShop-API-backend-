@@ -341,10 +341,30 @@ namespace TechShop_API_backend_.Controllers.Api
         }
 
 
+        [Authorize]
+        [HttpPost("update-receive-info/{orderId}")]
+        public async Task<IActionResult> UpdateReceiveInfo(string orderId, [FromBody] ReceiveInfo receiveInfo)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim))
+                return Unauthorized("User ID not found in token.");
+            if (!int.TryParse(userIdClaim, out int userId))
+                return BadRequest("Invalid user ID format.");
+            var existingOrder = await _orderRepository.GetOrderByIdAsync(orderId);
+            if (existingOrder == null)
+                return NotFound("Order not found.");
+            if (existingOrder.UserID != userId)
+                return Forbid("You are not allowed to modify this order.");
+            if (existingOrder.Status != "Pending")
+                return BadRequest("Order cannot be modified after it is processed or shipped.");
+            // Update receive info
+            existingOrder.ReceiveInfo = receiveInfo;
+            await _orderRepository.UpdateOrderAsync(existingOrder);
+            return Ok(new { message = "Receive information updated successfully.", order = existingOrder });
 
 
 
 
-
+        }
     }
 }

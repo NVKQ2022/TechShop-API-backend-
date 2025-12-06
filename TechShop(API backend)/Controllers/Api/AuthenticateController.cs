@@ -1,27 +1,28 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using TechShop_API_backend_.Models;
-using TechShop_API_backend_.DTOs.Auth;
-using System.ComponentModel;
-using Microsoft.AspNetCore.Identity.Data;
-using TechShop_API_backend_.Service;
+﻿using System.ComponentModel;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using TechShop_API_backend_.Models.Api;
-using TechShop_API_backend_.DTOs.User;
-using TechShop_API_backend_.Helpers;
-using TechShop_API_backend_.Data.Authenticate;
-using TechShop_API_backend_.Models.Authenticate;
+using System.Text;
+using FirebaseAdmin;
+using FirebaseAdmin.Auth;
+using Google.Apis.Auth;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
-using static System.Net.WebRequestMethods;
 using TechShop.API.Models;
 using TechShop.API.Repositories;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Text;
-using Google.Apis.Auth;
-using FirebaseAdmin;
-using Google.Apis.Auth.OAuth2;
-using FirebaseAdmin.Auth;
+using TechShop_API_backend_.Data.Authenticate;
+using TechShop_API_backend_.DTOs.Auth;
+using TechShop_API_backend_.DTOs.FCM;
+using TechShop_API_backend_.DTOs.User;
+using TechShop_API_backend_.Helpers;
+using TechShop_API_backend_.Models;
+using TechShop_API_backend_.Models.Api;
+using TechShop_API_backend_.Models.Authenticate;
+using TechShop_API_backend_.Service;
+using static System.Net.WebRequestMethods;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -41,20 +42,22 @@ namespace TechShop_API_backend_.Controllers.Api
         VerificationCodeRepository _verificationCodeRepository;
         JwtService _jwtService;
         EmailService _emailService;
+        private readonly FcmService _fcmService;
         private readonly ILogger<AuthenticateController> _logger;
         private readonly AuthProviderRepository _authProviderRepository;
         private string _googleClientId = Environment.GetEnvironmentVariable("GoogleOAuth__ClientId") ?? "";
-        public AuthenticateController(UserRepository userRepository,EmailService emailService , VerificationCodeRepository verificationCodeRepository, JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
+        public AuthenticateController(UserRepository userRepository
+                                     ,EmailService emailService 
+                                     ,VerificationCodeRepository verificationCodeRepository
+                                     ,FcmService fcmService
+                                     ,JwtService jwtService, ILogger<AuthenticateController> logger, IConfiguration config, AuthProviderRepository authProviderRepository)
         {
 
-            //FirebaseApp.Create(new AppOptions()
-            //{
-            //    Credential = GoogleCredential.FromFile("firebase-adminsdk.json")
-            //});
+            _userRepository = userRepository;
 
             //need to test firebase admin sdk
 
-
+            _fcmService = fcmService;
             _config = config;
             _authProviderRepository = authProviderRepository;
             _verificationCodeRepository = verificationCodeRepository;
@@ -85,6 +88,49 @@ namespace TechShop_API_backend_.Controllers.Api
         //    }
         //    return result;
         //}
+
+
+        [AllowAnonymous]
+        [HttpPost("fcm/register")]
+        public async Task<IActionResult> RegisterFcmToken([FromBody] FcmTokenRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userId))
+                return Unauthorized("User ID not found in token.");
+            if (string.IsNullOrWhiteSpace(request.Token))
+                return BadRequest("Token cannot be empty.");
+            var result = await _fcmService.RegisterTokenAsync(int.Parse(userId), request.Token);
+            return Ok(new { message = "Token registered.", data = result });
+        }
+
+        // 🔹 POST api/fcm/send
+
+        [AllowAnonymous]
+        [HttpPost("fcm/send")]
+        public async Task<IActionResult> SendMessage([FromBody] SendFcmMessageRequest request)
+        {
+            bool sent = await _fcmService.SendMessageToUserAsync(
+                request.UserId,
+                request.Title,
+                request.Body,
+                request.Data
+            );
+
+            if (!sent)
+                return BadRequest("Failed to send notification. User may not have a token.");
+
+            return Ok(new { message = "Notification sent." });
+        }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -371,7 +417,7 @@ namespace TechShop_API_backend_.Controllers.Api
                     var user =await _userRepository.GetUserByEmailAsync(email);
                     user.IsEmailVerified = true;
                     await _userRepository.UpdateUserAsync(user);
-                    return Ok(new { Message = $"{user.Username} , your email ({email}) successfully verified  ." });
+                    return Ok(new { Message = $"{user.Username} , your email ({email}) successfully verified , with {token} ." });
                 }
                 else
                 {

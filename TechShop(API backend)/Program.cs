@@ -12,6 +12,8 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using TechShop.API.Repositories;
 using TechShop_API_backend_.Helpers;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -32,7 +34,11 @@ builder.Services.AddScoped<OrderRepository>();
 builder.Services.AddScoped<VerificationCodeRepository>();
 builder.Services.AddScoped<AuthProviderRepository>();    
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<ImageService>();
+builder.Services.AddScoped<UserFcmRepository>();
+builder.Services.AddScoped<FcmService>();
+
 // Add service configurations
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
@@ -44,6 +50,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AuthenticateDbContext>(options =>
     options.UseSqlServer(Environment.GetEnvironmentVariable("ConnectionString__UserDatabase")));
 //;
+
 
 
 
