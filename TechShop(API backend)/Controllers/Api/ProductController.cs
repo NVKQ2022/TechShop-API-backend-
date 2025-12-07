@@ -92,18 +92,27 @@ namespace TechShop_API_backend_.Controllers.Api
             return Ok(categories);
         }
 
-
         [AllowAnonymous]
         [HttpGet("Search/{keyword}")]
         public async Task<IActionResult> Search(string keyword)
         {
             ConverterHelper converterHelper = new ConverterHelper();
 
-            // Fetch search results based on the keyword
-            var searchResults = await productRepository.SearchAsync(keyword);
+            // Fetch search results based on the keyword (for name or description)
+            var searchResultKeyword = await productRepository.SearchAsync(keyword);
 
-            // Convert product list to Product_zip list
-            List<Product_zip> product_Zips = converterHelper.ConvertProductListToProductZipList(searchResults);
+            // Fetch search results based on the keyword (for category)
+            var searchResultCategory = await productRepository.GetByCategoryAsync(keyword);
+
+            // Combine the results from both searches (keyword search and category search)
+            var combinedResults = searchResultKeyword
+                .Concat(searchResultCategory)
+                .Distinct() // Remove duplicates, if any
+                .ToList();
+
+            // Convert the combined product list to Product_zip list
+            List<Product_zip> product_Zips = converterHelper.ConvertProductListToProductZipList(combinedResults);
+
             return Ok(product_Zips);
         }
 

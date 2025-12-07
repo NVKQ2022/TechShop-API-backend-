@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using TechShop_API_backend_.Helpers;
 using TechShop_API_backend_.Service;
 
 namespace TechShop_API_backend_.Controllers.Api
@@ -12,9 +13,11 @@ namespace TechShop_API_backend_.Controllers.Api
         private readonly RecommendationService _service;
         private readonly ILogger _logger;
         private readonly ProductRepository _productRepository;
-        public RecommendationController(RecommendationService service, ProductRepository productRepository)
+        ConverterHelper _converter;
+        public RecommendationController(RecommendationService service, ProductRepository productRepository, ConverterHelper converterHelper)
         {
             _service = service;
+            _converter = converterHelper;
             _productRepository = productRepository;
         }
 
@@ -37,8 +40,8 @@ namespace TechShop_API_backend_.Controllers.Api
             }
             if (products.Count > 0)
             {
-
-                return Ok(products);
+                var products_zip = _converter.ConvertProductListToProductZipList(products);
+                return Ok(products_zip);
             }
             else
             {
