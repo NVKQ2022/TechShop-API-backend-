@@ -468,5 +468,13 @@ namespace TechShop_API_backend_.Controllers.Api
             return Ok(result);
         }
 
+        [HttpGet("top-customers")]
+        public async Task<ActionResult<List<AdminTopCustomerDto>>> GetTopCustomers([FromQuery] int top = 5)
+        {
+            var result = await _adminRepository.GetTopCustomersByTotalSpentAsync(top);
+            return Ok(result);
+        }
+
+
     }
 }

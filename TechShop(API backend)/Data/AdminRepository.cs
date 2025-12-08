@@ -187,9 +187,9 @@ namespace TechShop_API_backend_.Data
             int cancelledOrders = orders.Count(o => o.Status == "Cancelled");
 
 
-            int totalSpent = orders
+            decimal totalSpent = orders
                 .Where(o => o.Status == "Delivered")
-                .Sum(o => o.TotalAmount);
+                .Sum(o => (decimal)o.TotalAmount);
 
             DateTime? firstOrderAt = null;
             DateTime? lastOrderAt = null;
@@ -448,6 +448,67 @@ namespace TechShop_API_backend_.Data
 
             return stats;
         }
+
+        public async Task<List<AdminTopCustomerDto>> GetTopCustomersByTotalSpentAsync(int top = 5)
+        {
+            if (top <= 0) top = 5;
+
+            // Lấy tất cả order (hoặc có thể filter theo CreatedAt nếu muốn giới hạn thời gian)
+            var orders = await _order.Find(_ => true).ToListAsync();
+
+            var grouped = orders
+                .GroupBy(o => o.UserID)
+                .Select(g => new
+                {
+                    UserId = g.Key,
+                    TotalOrders = g.Count(),
+                    DeliveredOrders = g.Count(o => o.Status == "Delivered"),
+                    CancelledOrders = g.Count(o => o.Status == "Cancelled"),
+                    TotalSpent = g
+                        .Where(o => o.Status == "Delivered")
+                        .Sum(o => (decimal)o.TotalAmount)
+                })
+                .Where(x => x.TotalSpent > 0) // bỏ user chưa chi tiêu
+                .OrderByDescending(x => x.TotalSpent)
+                .Take(top)
+                .ToList();
+
+            var userIds = grouped.Select(x => x.UserId).ToList();
+
+            // Lấy thông tin user từ SQL
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+
+            // Lấy detail từ Mongo (UserDetail)
+            var details = await _userDetail
+                .Find(d => userIds.Contains(d.UserId))   // nếu property tên UserId thì sửa lại
+                .ToListAsync();
+
+            var result = (
+                from g in grouped
+                join u in users on g.UserId equals u.Id into uj
+                from u in uj.DefaultIfEmpty()
+                join d in details on g.UserId equals d.UserId into dj   // sửa UserID/UserId cho đúng model
+                from d in dj.DefaultIfEmpty()
+                select new AdminTopCustomerDto
+                {
+                    UserId = g.UserId,
+                    Email = u?.Email,
+                    Username = u?.Username,
+                    Name = d?.Name,
+                    Avatar = d?.Avatar,
+                    TotalOrders = g.TotalOrders,
+                    DeliveredOrders = g.DeliveredOrders,
+                    CancelledOrders = g.CancelledOrders,
+                    TotalSpent = g.TotalSpent
+                })
+                .OrderByDescending(x => x.TotalSpent)
+                .ToList();
+
+            return result;
+        }
+
 
         public async Task<bool> DeleteProductAsync(string productId)
         {
