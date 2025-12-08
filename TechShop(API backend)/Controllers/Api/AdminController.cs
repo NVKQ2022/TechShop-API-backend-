@@ -415,7 +415,58 @@ namespace TechShop_API_backend_.Controllers.Api
             });
         }
 
+        [HttpGet("orders/daily-stats")]
+        public async Task<ActionResult<List<AdminDailyOrderStatDto>>> GetDailyOrderStats(
+            [FromQuery] int days = 30)
+        {
+            var result = await _adminRepository.GetDailyOrderStatsAsync(days);
+            return Ok(result);
+        }
 
+        // 2) Orders – status distribution (pie chart)
+        // GET: api/Admin/orders/status-distribution
+        [HttpGet("orders/status-distribution")]
+        public async Task<ActionResult<List<AdminOrderStatusDistributionDto>>> GetOrderStatusDistribution()
+        {
+            var result = await _adminRepository.GetOrderStatusDistributionAsync();
+            return Ok(result);
+        }
+
+        // 3) Orders – payment methods (pie/bar chart)
+        // GET: api/Admin/orders/payment-methods
+        [HttpGet("orders/payment-methods")]
+        public async Task<ActionResult<List<AdminPaymentMethodStatDto>>> GetPaymentMethodStats()
+        {
+            var result = await _adminRepository.GetPaymentMethodStatsAsync();
+            return Ok(result);
+        }
+
+        // 4) Products – category stats (bar chart)
+        // GET: api/Admin/products/category-stats
+        [HttpGet("products/category-stats")]
+        public async Task<ActionResult<List<AdminProductCategoryStatDto>>> GetProductCategoryStats()
+        {
+            var result = await _adminRepository.GetProductCategoryStatsAsync();
+            return Ok(result);
+        }
+
+        // 5) Products – rating distribution (bar 1–5 sao)
+        // GET: api/Admin/products/rating-distribution
+        [HttpGet("products/rating-distribution")]
+        public async Task<ActionResult<List<AdminRatingDistributionDto>>> GetRatingDistribution()
+        {
+            var result = await _adminRepository.GetRatingDistributionAsync();
+            return Ok(result);
+        }
+
+        // 6) Users – demographics (gender + age)
+        // GET: api/Admin/users/demographics
+        [HttpGet("users/demographics")]
+        public async Task<ActionResult<AdminDemographicsDto>> GetUserDemographics()
+        {
+            var result = await _adminRepository.GetUserDemographicsAsync();
+            return Ok(result);
+        }
 
     }
 }
