@@ -24,7 +24,7 @@ namespace TechShop_API_backend_.DTOs.Admin
     public int DeliveredOrders { get; set; }
     public int CancelledOrders { get; set; }
     public int ConfirmedOrders { get; set; }
-    public int TotalSpent { get; set; }
+    public decimal TotalSpent { get; set; }
 
     public DateTime? FirstOrderAt { get; set; }
     public DateTime? LastOrderAt { get; set; }

@@ -18,6 +18,9 @@ namespace TechShop_API_backend_.Data
         private readonly UserDetailRepository _userDetailRepository;
         private readonly IMongoCollection<ProductSaleEvent> _saleEvents;
 
+        private readonly IMongoCollection<Product> _product;
+        private readonly IMongoCollection<UserDetail> _userDetail;
+
         public AdminRepository(AuthenticateDbContext context, IOptions<MongoDbSettings> settings, OrderRepository orderRepository, ProductRepository productRepository,
                                 UserDetailRepository userDetailRepository)
         {
@@ -26,6 +29,8 @@ namespace TechShop_API_backend_.Data
             var database = client.GetDatabase(settings.Value.DatabaseName);
             _order = database.GetCollection<Order>(settings.Value.OrderCollectionName);
             _saleEvents = database.GetCollection<ProductSaleEvent>(settings.Value.ProductSaleEventCollectionName);
+            _product = database.GetCollection<Product>(settings.Value.ProductCollectionName);
+            _userDetail = database.GetCollection<UserDetail>(settings.Value.UserDetailCollectionName);
             _orderRepository = orderRepository;
             _productRepository = productRepository;
             _userDetailRepository = userDetailRepository;
@@ -182,9 +187,9 @@ namespace TechShop_API_backend_.Data
             int cancelledOrders = orders.Count(o => o.Status == "Cancelled");
 
 
-            int totalSpent = orders
+            decimal totalSpent = orders
                 .Where(o => o.Status == "Delivered")
-                .Sum(o => o.TotalAmount);
+                .Sum(o => (decimal)o.TotalAmount);
 
             DateTime? firstOrderAt = null;
             DateTime? lastOrderAt = null;
@@ -444,6 +449,67 @@ namespace TechShop_API_backend_.Data
             return stats;
         }
 
+        public async Task<List<AdminTopCustomerDto>> GetTopCustomersByTotalSpentAsync(int top = 5)
+        {
+            if (top <= 0) top = 5;
+
+            // Lấy tất cả order (hoặc có thể filter theo CreatedAt nếu muốn giới hạn thời gian)
+            var orders = await _order.Find(_ => true).ToListAsync();
+
+            var grouped = orders
+                .GroupBy(o => o.UserID)
+                .Select(g => new
+                {
+                    UserId = g.Key,
+                    TotalOrders = g.Count(),
+                    DeliveredOrders = g.Count(o => o.Status == "Delivered"),
+                    CancelledOrders = g.Count(o => o.Status == "Cancelled"),
+                    TotalSpent = g
+                        .Where(o => o.Status == "Delivered")
+                        .Sum(o => (decimal)o.TotalAmount)
+                })
+                .Where(x => x.TotalSpent > 0) // bỏ user chưa chi tiêu
+                .OrderByDescending(x => x.TotalSpent)
+                .Take(top)
+                .ToList();
+
+            var userIds = grouped.Select(x => x.UserId).ToList();
+
+            // Lấy thông tin user từ SQL
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+
+            // Lấy detail từ Mongo (UserDetail)
+            var details = await _userDetail
+                .Find(d => userIds.Contains(d.UserId))   // nếu property tên UserId thì sửa lại
+                .ToListAsync();
+
+            var result = (
+                from g in grouped
+                join u in users on g.UserId equals u.Id into uj
+                from u in uj.DefaultIfEmpty()
+                join d in details on g.UserId equals d.UserId into dj   // sửa UserID/UserId cho đúng model
+                from d in dj.DefaultIfEmpty()
+                select new AdminTopCustomerDto
+                {
+                    UserId = g.UserId,
+                    Email = u?.Email,
+                    Username = u?.Username,
+                    Name = d?.Name,
+                    Avatar = d?.Avatar,
+                    TotalOrders = g.TotalOrders,
+                    DeliveredOrders = g.DeliveredOrders,
+                    CancelledOrders = g.CancelledOrders,
+                    TotalSpent = g.TotalSpent
+                })
+                .OrderByDescending(x => x.TotalSpent)
+                .ToList();
+
+            return result;
+        }
+
+
         public async Task<bool> DeleteProductAsync(string productId)
         {
             var product = await _productRepository.GetByIdAsync(productId);
@@ -632,6 +698,191 @@ namespace TechShop_API_backend_.Data
             return result.DeletedCount;
         }
 
+        public async Task<List<AdminDailyOrderStatDto>> GetDailyOrderStatsAsync(int days)
+        {
+            if (days <= 0) days = 30;
+
+            var fromDate = DateTime.UtcNow.Date.AddDays(-days + 1);
+
+            var orders = await _order
+                .Find(o => o.CreatedAt >= fromDate)
+                .ToListAsync();
+
+            var grouped = orders
+                .GroupBy(o => o.CreatedAt.Date)
+                .Select(g => new AdminDailyOrderStatDto
+                {
+                    Date = g.Key,
+                    TotalOrders = g.Count(),
+                    DeliveredOrders = g.Count(o => o.Status == "Delivered"),
+                    CancelledOrders = g.Count(o => o.Status == "Cancelled"),
+                    Revenue = g
+                        .Where(o => o.Status == "Delivered")
+                        .Sum(o => (decimal)o.TotalAmount),
+                })
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            return grouped;
+        }
+
+        // 2) Orders – status distribution (pie chart)
+        public async Task<List<AdminOrderStatusDistributionDto>> GetOrderStatusDistributionAsync()
+        {
+            var orders = await _order.Find(_ => true).ToListAsync();
+
+            var result = orders
+                .GroupBy(o => o.Status ?? "Unknown")
+                .Select(g => new AdminOrderStatusDistributionDto
+                {
+                    Status = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(x => x.Count)
+                .ToList();
+
+            return result;
+        }
+
+        // 3) Orders – payment methods (pie / bar chart)
+        public async Task<List<AdminPaymentMethodStatDto>> GetPaymentMethodStatsAsync()
+        {
+            var orders = await _order.Find(_ => true).ToListAsync();
+
+            var result = orders
+                .GroupBy(o => string.IsNullOrEmpty(o.PaymentMethod) ? "Unknown" : o.PaymentMethod)
+                .Select(g => new AdminPaymentMethodStatDto
+                {
+                    PaymentMethod = g.Key,
+                    OrdersCount = g.Count(),
+                    Revenue = g
+                        .Where(o => o.Status == "Delivered")
+                        .Sum(o => (decimal)o.TotalAmount)
+                })
+                .OrderByDescending(x => x.OrdersCount)
+                .ToList();
+
+            return result;
+        }
+
+        // 4) Products – category stats (bar chart)
+        public async Task<List<AdminProductCategoryStatDto>> GetProductCategoryStatsAsync()
+        {
+            var products = await _product.Find(_ => true).ToListAsync();
+
+            var result = products
+                .GroupBy(p => p.Category ?? "Unknown")
+                .Select(g => new AdminProductCategoryStatDto
+                {
+                    Category = g.Key,
+                    ProductsCount = g.Count(),
+                    TotalStock = g.Sum(p => p.Stock),
+                    TotalSold = g.Sum(p => p.Sold)
+                })
+                .OrderByDescending(x => x.TotalSold)
+                .ToList();
+
+            return result;
+        }
+
+        // 5) Products – rating distribution (toàn shop, để vẽ bar 1–5 sao)
+        public async Task<List<AdminRatingDistributionDto>> GetRatingDistributionAsync()
+        {
+            var products = await _product.Find(_ => true).ToListAsync();
+
+            int GetCount(Product p, string key)
+            {
+                if (p.Rating == null) return 0;
+                return p.Rating.TryGetValue(key, out var value) ? value : 0;
+            }
+
+            var rate1 = products.Sum(p => GetCount(p, "rate_1"));
+            var rate2 = products.Sum(p => GetCount(p, "rate_2"));
+            var rate3 = products.Sum(p => GetCount(p, "rate_3"));
+            var rate4 = products.Sum(p => GetCount(p, "rate_4"));
+            var rate5 = products.Sum(p => GetCount(p, "rate_5"));
+
+            var list = new List<AdminRatingDistributionDto>
+        {
+            new AdminRatingDistributionDto { RatingValue = 1, Count = rate1 },
+            new AdminRatingDistributionDto { RatingValue = 2, Count = rate2 },
+            new AdminRatingDistributionDto { RatingValue = 3, Count = rate3 },
+            new AdminRatingDistributionDto { RatingValue = 4, Count = rate4 },
+            new AdminRatingDistributionDto { RatingValue = 5, Count = rate5 },
+        };
+
+            return list;
+        }
+
+        // 6) Users – demographics (gender + age buckets)
+        public async Task<AdminDemographicsDto> GetUserDemographicsAsync()
+        {
+            var users = await _userDetail.Find(_ => true).ToListAsync();
+            var result = new AdminDemographicsDto();
+
+            // Gender
+            var genderGroups = users
+                .GroupBy(u => string.IsNullOrEmpty(u.Gender) ? "Unknown" : u.Gender)
+                .Select(g => new AdminGenderDistributionDto
+                {
+                    Gender = g.Key,
+                    Count = g.Count()
+                })
+                .OrderByDescending(x => x.Count)
+                .ToList();
+
+            result.Gender = genderGroups;
+
+            // Age buckets
+            var today = DateTime.UtcNow.Date;
+
+            int? GetAge(DateTime? birthday)
+            {
+                if (birthday == null) return null;
+                var b = birthday.Value.Date;
+                var age = today.Year - b.Year;
+                if (b > today.AddYears(-age)) age--;
+                return age < 0 ? null : age;
+            }
+
+            string GetBucket(int age) =>
+                age < 18 ? "<18"
+                : age <= 24 ? "18–24"
+                : age <= 34 ? "25–34"
+                : age <= 44 ? "35–44"
+                : age <= 54 ? "45–54"
+                : "55+";
+
+            var ageBuckets = users
+                .Select(u => GetAge(u.Birthday)) // Birthday kiểu DateTime? trong UserDetail
+                .Where(age => age.HasValue)
+                .Select(age => GetBucket(age!.Value))
+                .GroupBy(bucket => bucket)
+                .Select(g => new AdminAgeBucketDto
+                {
+                    Range = g.Key,
+                    Count = g.Count()
+                })
+                .OrderBy(x =>
+                {
+                    // sắp xếp range
+                    return x.Range switch
+                    {
+                        "<18" => 0,
+                        "18–24" => 1,
+                        "25–34" => 2,
+                        "35–44" => 3,
+                        "45–54" => 4,
+                        "55+" => 5,
+                        _ => 99
+                    };
+                })
+                .ToList();
+
+            result.Age = ageBuckets;
+
+            return result;
+        }
 
         //HELPERS
         private double CalculateAverageRating(Product p)
