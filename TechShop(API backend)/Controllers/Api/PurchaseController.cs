@@ -140,13 +140,13 @@ namespace TechShop_API_backend_.Controllers.Api
                 return NotFound("no order found for this user or already payed" );
             }
             var amount = order.TotalAmount;
-
+            string template = "f6mPiUs";
             string bankId = "BIDV";
             string account = "7011084307";
             string info = $"ORDER_{orderId}";
 
-            string qrUrl = $"https://api.vietqr.io/image/{bankId}-{account}-qr_only.png?amount={amount}&addInfo={info}";
-            string qrTestUrl = $"https://dev.vietqr.io/image/{bankId}-{account}-qr_only.png?amount={amount}&addInfo={info}";
+            string qrUrl = $"https://api.vietqr.io/image/{bankId}-{account}-{template}.png?amount={amount}&addInfo={info}";
+            string qrTestUrl = $"https://dev.vietqr.io/image/{bankId}-{account}-{template}.png?amount={amount}&addInfo={info}";
 
             return Ok(new { qr= qrUrl,
                             amount = amount
